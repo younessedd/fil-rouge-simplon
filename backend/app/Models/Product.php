@@ -10,17 +10,30 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = ['name','slug','description','price','stock','category_id','image'];
-
-    // إضافة حقل image_url تلقائيًا في JSON
-    protected $appends = ['image_url'];
-
+    
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
+    public function cartItems()
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    // دالة مساعدة للحصول على رابط الصورة
     public function getImageUrlAttribute()
     {
-        return $this->image ? asset('storage\app\public' . $this->image) : null;
+        if (!$this->image) {
+            return 'https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image';
+        }
+        
+        $baseUrl = config('app.url', 'http://localhost:8000');
+        return $baseUrl . '/storage/' . ltrim($this->image, '/');
     }
 }

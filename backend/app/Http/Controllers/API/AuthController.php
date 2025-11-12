@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
@@ -13,44 +12,60 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        // التحقق من البيانات مع الحقول الجديدة
         $validated = $request->validate([
-            'name'=>'required|string|max:255',
-            'email'=>'required|email|unique:users',
-            'password'=>'required|string|min:6|confirmed'
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+            'phone' => 'required|string|max:20',
+            'address' => 'required|string|max:500',
+            'city' => 'required|string|max:100'
         ]);
 
+        // إنشاء المستخدم مع البيانات الجديدة
         $user = User::create([
-            'name'=>$validated['name'],
-            'email'=>$validated['email'],
-            'password'=>Hash::make($validated['password']),
-            'role'=>'user'
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => 'user',
+            'phone' => $validated['phone'],
+            'address' => $validated['address'],
+            'city' => $validated['city']
         ]);
 
         $token = $user->createToken('api-token')->plainTextToken;
 
-        return response()->json(['user'=>$user,'token'=>$token],201);
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ], 201);
     }
 
     public function login(Request $request)
     {
         $validated = $request->validate([
-            'email'=>'required|email',
-            'password'=>'required'
+            'email' => 'required|email',
+            'password' => 'required'
         ]);
 
-        $user = User::where('email',$validated['email'])->first();
-        if (!$user || !Hash::check($validated['password'],$user->password)) {
-            return response()->json(['message'=>'Invalid credentials'],401);
+        $user = User::where('email', $validated['email'])->first();
+        
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
-        return response()->json(['user'=>$user,'token'=>$token],200);
+        
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ], 200);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message'=>'Logged out']);
+        return response()->json(['message' => 'Logged out']);
     }
 
     public function me(Request $request)

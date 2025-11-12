@@ -1,9 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\API;
+
 use App\Http\Controllers\Controller;
-
-
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -11,7 +10,6 @@ use App\Models\Product;
 
 class OrderController extends Controller
 {
-    // إنشاء طلب جديد
     public function store(Request $request)
     {
         $request->validate([
@@ -53,45 +51,38 @@ class OrderController extends Controller
         ], 201);
     }
 
-    // عرض جميع الطلبات الخاصة بالمستخدم
     public function index()
     {
         $orders = Order::where('user_id', auth()->id())->with('items.product')->get();
         return response()->json($orders);
     }
 
-    // عرض تفاصيل طلب واحد
     public function show($id)
     {
         $order = Order::where('user_id', auth()->id())->with('items.product')->findOrFail($id);
         return response()->json($order);
     }
 
-  
+    public function allOrdersForAdmin()
+    {
+        $user = auth()->user();
 
-    // داخل OrderController.php
-public function allOrdersForAdmin()
-{
-    $user = auth()->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
-    if ($user->role !== 'admin') {
-        return response()->json(['error' => 'Unauthorized'], 403);
+        $orders = Order::with(['items.product', 'user'])->get();
+
+        return response()->json([
+            'message' => 'Orders fetched successfully',
+            'orders' => $orders
+        ], 200);
     }
 
-    $orders = Order::with(['items.product', 'user'])->get();
-
-    return response()->json([
-        'message' => 'Orders fetched successfully',
-        'orders' => $orders
-    ], 200);
-}
-
-
-
-
-
-
-
-
-
+    public function destroy($id)
+    {
+        $order = Order::where('user_id', auth()->id())->findOrFail($id);
+        $order->delete();
+        return response()->json(['message' => 'Order deleted successfully'], 200);
+    }
 }

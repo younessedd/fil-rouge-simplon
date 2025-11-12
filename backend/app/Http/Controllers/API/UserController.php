@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    // عرض جميع المستخدمين
     public function index(Request $request)
     {
         $admin = $request->user();
@@ -20,7 +19,6 @@ class UserController extends Controller
         return response()->json(User::all());
     }
 
-    // عرض تفاصيل مستخدم
     public function show(Request $request, User $user)
     {
         $admin = $request->user();
@@ -31,7 +29,6 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    // إنشاء مستخدم جديد
     public function store(Request $request)
     {
         $admin = $request->user();
@@ -43,20 +40,25 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'required|in:user,admin'
+            'role' => 'required|in:user,admin',
+            'phone' => 'required|string|max:20',
+            'address' => 'required|string|max:500',
+            'city' => 'required|string|max:100'
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role']
+            'role' => $validated['role'],
+            'phone' => $validated['phone'],
+            'address' => $validated['address'],
+            'city' => $validated['city']
         ]);
 
         return response()->json($user, 201);
     }
 
-    // تعديل مستخدم موجود
     public function update(Request $request, User $user)
     {
         $admin = $request->user();
@@ -68,7 +70,10 @@ class UserController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6',
-            'role' => 'sometimes|required|in:user,admin'
+            'role' => 'sometimes|required|in:user,admin',
+            'phone' => 'sometimes|required|string|max:20',
+            'address' => 'sometimes|required|string|max:500',
+            'city' => 'sometimes|required|string|max:100'
         ]);
 
         if (!empty($validated['password'])) {
@@ -82,7 +87,6 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    // حذف مستخدم
     public function destroy(Request $request, User $user)
     {
         $admin = $request->user();

@@ -1,40 +1,39 @@
 <?php
 
 namespace Database\Factories;
+
 use App\Models\Category;
-
-
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
- */
 class ProductFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    // public function definition(): array
-    // {
-    //     return [
-    //         //
-    //     ];
-    // }
+    private static $productIndex = 0;
+    
+    private $productNames = [
+        'iPhone 15 Pro', 'Samsung Galaxy S24', 'MacBook Pro 16"', 'Dell XPS 15',
+        'iPad Air', 'Samsung Tablet S9', 'Wireless Headphones', 'Phone Case',
+        'USB-C Cable', 'Smart TV 55"', 'Gaming Laptop', 'Digital Camera',
+        'Smart Watch', 'Bluetooth Speaker', 'External Hard Drive',
+        'Wireless Mouse', 'Mechanical Keyboard', 'Monitor 27"', 'Tablet Stand',
+        'Laptop Bag', 'Power Bank', 'Earbuds', 'Webcam', 'Microphone', 'Router'
+    ];
 
     public function definition()
-{
-    return [
-        'name' => $this->faker->word,
-        'slug' => $this->faker->unique()->slug,
-        'description' => $this->faker->sentence,
-        'price' => $this->faker->randomFloat(2, 10, 500),
-        'stock' => $this->faker->numberBetween(1, 50),
-        'category_id' => Category::factory(),
-        // لإضافة صورة افتراضية
-        'image' => $this->faker->image('storage/app/public/products', 400, 300, null, false),
-    ];
-}
+    {
+        // استخدام الفهرس لضمان القيم الفريدة
+        $name = $this->productNames[self::$productIndex % count($this->productNames)];
+        $uniqueSuffix = self::$productIndex > count($this->productNames) ? ' ' . (self::$productIndex + 1) : '';
+        
+        self::$productIndex++;
 
+        return [
+            'name' => $name . $uniqueSuffix,
+            'slug' => \Illuminate\Support\Str::slug($name . $uniqueSuffix),
+            'description' => $this->faker->paragraph(2),
+            'price' => $this->faker->randomFloat(2, 10, 2000),
+            'stock' => $this->faker->numberBetween(0, 100),
+            'category_id' => Category::factory(),
+            'image' => $this->faker->optional(0.3)->passthrough('products/product-' . $this->faker->numberBetween(1, 10) . '.jpg'),
+        ];
+    }
 }

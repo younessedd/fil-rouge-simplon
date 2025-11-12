@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { ordersAPI } from '../services/api';
 import Loading from '../components/Loading';
-import './Orders.css';
+import './AdminOrders.css';
 
-const Orders = () => {
+const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('');
 
   // Fetch orders when component mounts
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  // Fetch orders from API
+  // Fetch all orders from API
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await ordersAPI.getAll();
-      setOrders(response.data);
+      const response = await ordersAPI.getAllAdmin();
+      setOrders(response.data.orders || response.data);
     } catch (error) {
       setError('Failed to load orders');
       console.error('Error fetching orders:', error);
@@ -49,36 +50,58 @@ const Orders = () => {
     return order.items?.reduce((total, item) => total + item.quantity, 0) || 0;
   };
 
-  // Handle order cancellation
-  const handleCancelOrder = async (orderId) => {
-    if (window.confirm('Are you sure you want to cancel this order?')) {
+  // Update order status
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      // This would typically be a PUT request to update order status
+      // For now, we'll update locally
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      );
+      alert(`Order status updated to ${newStatus}`);
+    } catch (error) {
+      setError('Failed to update order status');
+      console.error('Error updating order status:', error);
+    }
+  };
+
+  // Delete order
+  const handleDeleteOrder = async (orderId) => {
+    if (window.confirm('Are you sure you want to delete this order?')) {
       try {
         await ordersAPI.delete(orderId);
         setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
-        alert('Order cancelled successfully');
+        alert('Order deleted successfully');
       } catch (error) {
-        setError('Failed to cancel order');
-        console.error('Error cancelling order:', error);
+        setError('Failed to delete order');
+        console.error('Error deleting order:', error);
       }
     }
   };
+
+  // Filter orders by status
+  const filteredOrders = filterStatus
+    ? orders.filter(order => order.status === filterStatus)
+    : orders;
 
   if (loading) {
     return <Loading />;
   }
 
   return (
-    <div className="orders-page">
-      <div className="orders-container">
+    <div className="admin-orders-page">
+      <div className="admin-orders-container">
         {/* Page Header */}
-        <div className="orders-header">
-          <h1>My Orders</h1>
-          <p>Track and manage your orders</p>
+        <div className="admin-orders-header">
+          <h1>Manage Orders</h1>
+          <p>View and manage all customer orders</p>
         </div>
 
         {/* Error Display */}
         {error && (
-          <div className="orders-error">
+          <div className="admin-error">
             {error}
             <button onClick={() => setError('')} className="error-close">
               ×
@@ -86,9 +109,32 @@ const Orders = () => {
           </div>
         )}
 
-        {orders.length > 0 ? (
+        {/* Filters */}
+        <div className="orders-filters">
+          <div className="filter-group">
+            <label>Filter by Status:</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="status-filter"
+            >
+              <option value="">All Orders</option>
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          
+          <div className="orders-count">
+            Showing {filteredOrders.length} of {orders.length} orders
+          </div>
+        </div>
+
+        {/* Orders List */}
+        {filteredOrders.length > 0 ? (
           <div className="orders-list">
-            {orders.map(order => (
+            {filteredOrders.map(order => (
               <div key={order.id} className="order-card">
                 {/* Order Header */}
                 <div className="order-header">
@@ -99,23 +145,43 @@ const Orders = () => {
                     <p className="order-date">
                       Placed on {formatDate(order.created_at)}
                     </p>
+                    <p className="customer-info">
+                      Customer: <strong>{order.user?.name || 'Unknown User'}</strong>
+                      <br />
+                      Email: {order.user?.email || 'N/A'}
+                    </p>
                   </div>
                   
-                  <div className="order-status">
-                    <span className={`status-badge ${order.status || 'completed'}`}>
-                      {order.status || 'Completed'}
-                    </span>
-                  </div>
+                  <div className="order-meta">
+                    <div className="order-status-section">
+                      <label>Status:</label>
+                      <select
+                        value={order.status || 'pending'}
+                        onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                        className="status-select"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
 
-                  <div className="order-total">
-                    ${parseFloat(order.total).toFixed(2)}
+                    <div className="order-total">
+                      ${parseFloat(order.total).toFixed(2)}
+                    </div>
                   </div>
                 </div>
 
                 {/* Order Summary */}
                 <div className="order-summary">
-                  <div className="order-items-count">
-                    {calculateTotalItems(order)} items
+                  <div className="order-details-quick">
+                    <span className="items-count">
+                      {calculateTotalItems(order)} items
+                    </span>
+                    <span className="order-id">
+                      ID: #{order.id}
+                    </span>
                   </div>
                   
                   <div className="order-actions">
@@ -126,15 +192,12 @@ const Orders = () => {
                       {expandedOrder === order.id ? 'Hide Details' : 'View Details'}
                     </button>
                     
-                    {/* Only show cancel button for recent orders */}
-                    {!order.status || order.status === 'pending' ? (
-                      <button
-                        onClick={() => handleCancelOrder(order.id)}
-                        className="cancel-order-btn"
-                      >
-                        Cancel Order
-                      </button>
-                    ) : null}
+                    <button
+                      onClick={() => handleDeleteOrder(order.id)}
+                      className="delete-order-btn"
+                    >
+                      Delete Order
+                    </button>
                   </div>
                 </div>
 
@@ -172,6 +235,28 @@ const Orders = () => {
                       ))}
                     </div>
 
+                    {/* Customer Information */}
+                    <div className="customer-details">
+                      <h4>Customer Information</h4>
+                      <div className="customer-info-grid">
+                        <div>
+                          <strong>Name:</strong> {order.user?.name || 'N/A'}
+                        </div>
+                        <div>
+                          <strong>Email:</strong> {order.user?.email || 'N/A'}
+                        </div>
+                        <div>
+                          <strong>Phone:</strong> {order.user?.phone || 'N/A'}
+                        </div>
+                        <div>
+                          <strong>Address:</strong> {order.user?.address || 'N/A'}
+                        </div>
+                        <div>
+                          <strong>City:</strong> {order.user?.city || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Order Totals */}
                     <div className="order-totals">
                       <div className="total-row">
@@ -200,14 +285,13 @@ const Orders = () => {
           /* Empty Orders State */
           <div className="empty-orders">
             <div className="empty-orders-content">
-              <h2>No orders yet</h2>
-              <p>You haven't placed any orders. Start shopping to see your orders here.</p>
-              <button
-                onClick={() => window.location.href = '/products'}
-                className="start-shopping-btn"
-              >
-                Start Shopping
-              </button>
+              <h2>No orders found</h2>
+              <p>
+                {filterStatus 
+                  ? `No orders with status "${filterStatus}" found.`
+                  : 'No orders have been placed yet.'
+                }
+              </p>
             </div>
           </div>
         )}
@@ -216,4 +300,4 @@ const Orders = () => {
   );
 };
 
-export default Orders;
+export default AdminOrders;

@@ -8,18 +8,22 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\CartItem;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        // إنشاء Admin واحد
+        // إنشاء Admin واحد مع البيانات الجديدة
         $admin = User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
             'role' => 'admin',
             'password' => Hash::make('password'),
+            'phone' => '+1-555-0101',
+            'address' => '123 Admin Street, Downtown',
+            'city' => 'New York',
         ]);
 
         // إنشاء 5 مستخدمين عاديين
@@ -58,6 +62,20 @@ class DatabaseSeeder extends Seeder
             }
 
             $order->update(['total' => $total]);
+
+            // إضافة بعض العناصر إلى سلة المستخدم
+            CartItem::factory(2)->create([
+                'user_id' => $user->id,
+            ]);
         }
+
+        // رسالة تأكيد
+        $this->command->info('✅ Database seeded successfully!');
+        $this->command->info('👑 Admin User: admin@example.com / password');
+        $this->command->info('👥 5 regular users created');
+        $this->command->info('📁 5 categories created');
+        $this->command->info('🛍️ 25 products created');
+        $this->command->info('📦 5 orders created');
+        $this->command->info('🛒 10 cart items created');
     }
 }

@@ -1,34 +1,28 @@
 <?php
 
 namespace Database\Factories;
-use App\Models\Category;
-
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Category>
- */
 class CategoryFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    // public function definition(): array
-    // {
-    //     return [
-    //         //
-    //     ];
-    // }
+    private static $categoryIndex = 0;
+    
+    private $categories = [
+        'Electronics', 'Mobile Phones', 'Laptops', 'Tablets', 'Accessories',
+        'Home Appliances', 'Clothing', 'Books', 'Sports', 'Beauty'
+    ];
 
     public function definition()
-{
-    return [
-        'name' => $this->faker->word,
-        'slug' => $this->faker->unique()->slug,
-    ];
-}
+    {
+        $name = $this->categories[self::$categoryIndex % count($this->categories)];
+        $uniqueSuffix = self::$categoryIndex > count($this->categories) ? ' ' . (self::$categoryIndex + 1) : '';
+        
+        self::$categoryIndex++;
 
+        return [
+            'name' => $name . $uniqueSuffix,
+            'slug' => \Illuminate\Support\Str::slug($name . $uniqueSuffix),
+        ];
+    }
 }

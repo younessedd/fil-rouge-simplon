@@ -13,7 +13,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('role')->default('user'); // admin | user | manager
+            $table->string('role')->default('user');
+            $table->string('phone')->nullable();        // إضافة
+            $table->text('address')->nullable();        // إضافة
+            $table->string('city')->nullable();         // إضافة
             $table->rememberToken();
             $table->timestamps();
         });

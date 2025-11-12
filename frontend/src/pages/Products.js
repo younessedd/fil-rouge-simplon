@@ -1,116 +1,168 @@
-// src/pages/Products.js
-import React, { useEffect, useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import api from '../services/api';
-import Modal from '../components/Modal';
+import React, { useState, useEffect } from 'react';
+import { productsAPI } from '../services/api';
+import ProductCard from '../components/ProductCard';
+import Loading from '../components/Loading';
+import './Products.css';
 
-const Products = () => {
-  const { user } = useContext(AuthContext);
+const Products = ({ user }) => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    price: '',
-    category_id: '',
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
-  // جلب المنتجات
-  const fetchProducts = async () => {
-    try {
-      const res = await api.get('/products');
-      // تعديل هنا حسب شكل البيانات من الـ API
-      setProducts(res.data.data || res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // جلب الفئات
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get('/categories');
-      setCategories(res.data.data || res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  // Fetch products and categories on component mount
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure?')) return;
+  // Filter products when search term or category changes
+  useEffect(() => {
+    filterProducts();
+  }, [products, searchTerm, selectedCategory]);
+
+  // Fetch all products from API
+  const fetchProducts = async () => {
     try {
-      await api.delete(`/products/${id}`);
-      setProducts(products.filter(p => p.id !== id));
-    } catch (err) {
-      console.error(err);
+      setLoading(true);
+      const response = await productsAPI.getAll();
+      setProducts(response.data.data || response.data);
+    } catch (error) {
+      setError('Failed to load products');
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAddProduct = async () => {
+  // Filter products based on search term and category
+  const filterProducts = () => {
+    let filtered = products;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter(product =>
+        product.category_id === parseInt(selectedCategory)
+      );
+    }
+
+    setFilteredProducts(filtered);
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle category filter change
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+  };
+
+  // Handle add to cart functionality
+  const handleAddToCart = async (product) => {
     try {
-      const res = await api.post('/products', newProduct);
-      setProducts([...products, res.data]);
-      setShowModal(false);
-      setNewProduct({ name: '', price: '', category_id: '' });
-    } catch (err) {
-      console.error(err);
-      alert('Error adding product');
+      // This will be implemented when we create the cart functionality
+      console.log('Adding to cart:', product);
+      alert(`${product.name} added to cart!`);
+    } catch (error) {
+      console.error('Error adding to cart:', error);
     }
   };
 
-  if (!Array.isArray(products)) return <p>Loading...</p>;
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('');
+  };
+
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
-    <div>
-      <h2>Products</h2>
+    <div className="products-page">
+      <div className="products-container">
+        {/* Page Header */}
+        <div className="products-header">
+          <h1>Our Products</h1>
+          <p>Discover our amazing collection of products</p>
+        </div>
 
-      {user.role === 'admin' && (
-        <button onClick={() => setShowModal(true)}>Add Product</button>
-      )}
+        {/* Error Display */}
+        {error && (
+          <div className="products-error">
+            {error}
+          </div>
+        )}
 
-      <ul>
-        {products.map(p => (
-          <li key={p.id}>
-            {p.name} - ${p.price} - Category: {p.category?.name || 'N/A'}
-            {user.role === 'admin' && (
-              <button onClick={() => handleDelete(p.id)}>Delete</button>
-            )}
-          </li>
-        ))}
-      </ul>
+        {/* Search and Filter Section */}
+        <div className="products-filters">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+          </div>
 
-      {showModal && (
-        <Modal onClose={() => setShowModal(false)}>
-          <h3>Add New Product</h3>
-          <input
-            type="text"
-            placeholder="Name"
-            value={newProduct.name}
-            onChange={e => setNewProduct({...newProduct, name: e.target.value})}
-          />
-          <input
-            type="number"
-            placeholder="Price"
-            value={newProduct.price}
-            onChange={e => setNewProduct({...newProduct, price: e.target.value})}
-          />
-          <select
-            value={newProduct.category_id}
-            onChange={e => setNewProduct({...newProduct, category_id: e.target.value})}
-          >
-            <option value="">Select category</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+          <div className="filter-box">
+            <select
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+              className="category-filter"
+            >
+              <option value="">All Categories</option>
+              {/* Categories will be dynamically loaded when we implement categories API */}
+              <option value="1">Electronics</option>
+              <option value="2">Clothing</option>
+              <option value="3">Home & Garden</option>
+            </select>
+          </div>
+
+          {(searchTerm || selectedCategory) && (
+            <button onClick={clearFilters} className="clear-filters-btn">
+              Clear Filters
+            </button>
+          )}
+        </div>
+
+        {/* Products Count */}
+        <div className="products-count">
+          Showing {filteredProducts.length} of {products.length} products
+        </div>
+
+        {/* Products Grid */}
+        {filteredProducts.length > 0 ? (
+          <div className="products-grid">
+            {filteredProducts.map(product => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={handleAddToCart}
+                showAddButton={true}
+              />
             ))}
-          </select>
-          <button onClick={handleAddProduct}>Add</button>
-        </Modal>
-      )}
+          </div>
+        ) : (
+          <div className="no-products">
+            <h3>No products found</h3>
+            <p>Try adjusting your search or filter criteria</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
