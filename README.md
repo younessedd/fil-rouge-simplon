@@ -1,5 +1,10 @@
 Mini E-Commerce (Laravel + React) 
 
+all doc url google drive:
+https://drive.google.com/drive/folders/16PB1cieaNC85UrChHOKz4kdHBJKB5nmy?usp=sharing
+
+
+
 Contexte du projet 
 Mini E-Commerce est une plateforme de vente en ligne développée avec Laravel 
 (backend API) et React (frontend). 
