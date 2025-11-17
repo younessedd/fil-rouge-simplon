@@ -16,7 +16,7 @@ class UserController extends Controller
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        return response()->json(User::all());
+        return response()->json(User::paginate(15));
     }
 
     public function show(Request $request, User $user)

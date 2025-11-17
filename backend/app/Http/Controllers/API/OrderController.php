@@ -51,19 +51,25 @@ class OrderController extends Controller
         ], 201);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::where('user_id', auth()->id())->with('items.product')->get();
+        $orders = Order::where('user_id', auth()->id())
+            ->with('items.product')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
         return response()->json($orders);
     }
 
     public function show($id)
     {
-        $order = Order::where('user_id', auth()->id())->with('items.product')->findOrFail($id);
+        $order = Order::where('user_id', auth()->id())
+            ->with('items.product')
+            ->findOrFail($id);
         return response()->json($order);
     }
 
-    public function allOrdersForAdmin()
+    public function allOrdersForAdmin(Request $request)
     {
         $user = auth()->user();
 
@@ -71,12 +77,11 @@ class OrderController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $orders = Order::with(['items.product', 'user'])->get();
+        $orders = Order::with(['items.product', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
 
-        return response()->json([
-            'message' => 'Orders fetched successfully',
-            'orders' => $orders
-        ], 200);
+        return response()->json($orders, 200);
     }
 
     public function destroy($id)

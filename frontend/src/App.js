@@ -1,197 +1,108 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { authAPI } from './services/api';
-
-// Components
-import Header from './components/Header';
-import Loading from './components/Loading';
-
-// Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Products from './pages/Products';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Orders from './pages/Orders';
-import Admin from './pages/Admin';
-import AdminProducts from './pages/AdminProducts';
-import AdminUsers from './pages/AdminUsers';
-import AdminOrders from './pages/AdminOrders';
-import AdminCategories from './pages/AdminCategories';
-
-// CSS
-import './App.css';
+import Navbar from './components/Layout/Navbar';
+import Footer from './components/Layout/Footer';
+import Login from './components/Shared/Login';
+import Register from './components/Shared/Register';
+import UserHome from './components/UserDashboard/UserHome';
+import AdminHome from './components/AdminDashboard/AdminHome';
+import ProductsManagement from './components/AdminDashboard/ProductsManagement';
+import UsersManagement from './components/AdminDashboard/UsersManagement';
+import OrdersManagement from './components/AdminDashboard/OrdersManagement';
+import CategoriesManagement from './components/AdminDashboard/CategoriesManagement';
+import ProductsList from './components/UserDashboard/ProductsList';
+import ShoppingCart from './components/UserDashboard/ShoppingCart';
+import UserOrders from './components/UserDashboard/UserOrders';
+import UserProfile from './components/UserDashboard/UserProfile';
+import { getCurrentUser, isAuthenticated } from './utils/auth';
+import './styles/style.css';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [currentView, setCurrentView] = useState('home');
   const [loading, setLoading] = useState(true);
 
-  // Check if user is logged in on app start
   useEffect(() => {
+    const checkAuth = () => {
+      if (isAuthenticated()) {
+        const currentUser = getCurrentUser();
+        setUser(currentUser);
+      }
+      setLoading(false);
+    };
+
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
-    const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-
-    if (token && savedUser) {
-      try {
-        // Verify token is still valid
-        const response = await authAPI.getMe();
-        setUser(response.data);
-      } catch (error) {
-        // Token is invalid, logout
-        handleLogout();
-      }
-    }
-    setLoading(false);
-  };
-
-  const handleLogin = (userData) => {
+  const handleLogin = (userData, token) => {
     setUser(userData);
-    // Save user to localStorage
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('token', token);
+    setCurrentView(userData.role === 'admin' ? 'admin' : 'home');
   };
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
-  };
-
-  // Protected Route Component
-  const ProtectedRoute = ({ children, adminOnly = false }) => {
-    if (!user) {
-      return <Navigate to="/" replace />;
-    }
-
-    if (adminOnly && user.role !== 'admin') {
-      return <Navigate to="/products" replace />;
-    }
-
-    return children;
-  };
-
-  // Public Route Component (redirect if already logged in)
-  const PublicRoute = ({ children }) => {
-    if (user) {
-      return <Navigate to="/products" replace />;
-    }
-    return children;
+    localStorage.removeItem('token');
+    setCurrentView('home');
   };
 
   if (loading) {
-    return <Loading />;
+    return <div className="loading">Loading...</div>;
   }
 
+  const renderContent = () => {
+    if (!user) {
+      switch (currentView) {
+        case 'register':
+          return <Register onSwitchToLogin={() => setCurrentView('login')} />;
+        case 'login':
+        default:
+          return <Login onLogin={handleLogin} onSwitchToRegister={() => setCurrentView('register')} />;
+      }
+    }
+
+    if (user.role === 'admin') {
+      // Admin routes
+      switch (currentView) {
+        case 'admin-products':
+          return <ProductsManagement />;
+        case 'admin-users':
+          return <UsersManagement />;
+        case 'admin-orders':
+          return <OrdersManagement />;
+        case 'admin-categories':
+          return <CategoriesManagement />;
+        case 'admin':
+        default:
+          return <AdminHome currentView={currentView} onViewChange={setCurrentView} />;
+      }
+    } else {
+      // User routes
+      switch (currentView) {
+        case 'products':
+          return <ProductsList user={user} onViewChange={setCurrentView} />;
+        case 'cart':
+          return <ShoppingCart onViewChange={setCurrentView} />;
+        case 'orders':
+          return <UserOrders onViewChange={setCurrentView} />;
+        case 'profile':
+          return <UserProfile user={user} onViewChange={setCurrentView} />;
+        case 'home':
+        default:
+          return <UserHome currentView={currentView} onViewChange={setCurrentView} user={user} />;
+      }
+    }
+  };
+
   return (
-    <BrowserRouter>
-      <div className="App">
-        {user && <Header user={user} onLogout={handleLogout} />}
-        
-        <main className={user ? 'main-with-header' : 'main-full'}>
-          <Routes>
-            {/* Public Routes */}
-            <Route 
-              path="/" 
-              element={
-                <PublicRoute>
-                  <Login onLogin={handleLogin} />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/register" 
-              element={
-                <PublicRoute>
-                  <Register onLogin={handleLogin} />
-                </PublicRoute>
-              } 
-            />
-
-            {/* Protected Routes - All Users */}
-            <Route 
-              path="/products" 
-              element={
-                <ProtectedRoute>
-                  <Products user={user} />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/products/:id" 
-              element={
-                <ProtectedRoute>
-                  <ProductDetail />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/cart" 
-              element={
-                <ProtectedRoute>
-                  <Cart />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/orders" 
-              element={
-                <ProtectedRoute>
-                  <Orders />
-                </ProtectedRoute>
-              } 
-            />
-
-            {/* Admin Only Routes */}
-            <Route 
-              path="/admin" 
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <Admin user={user} />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/products" 
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminProducts />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminUsers />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/orders" 
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminOrders />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin/categories" 
-              element={
-                <ProtectedRoute adminOnly={true}>
-                  <AdminCategories />
-                </ProtectedRoute>
-              } 
-            />
-
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to={user ? "/products" : "/"} replace />} />
-          </Routes>
-        </main>
+    <div className="App">
+      <Navbar user={user} onLogout={handleLogout} onViewChange={setCurrentView} />
+      <div className="container">
+        {renderContent()}
       </div>
-    </BrowserRouter>
+      <Footer />
+    </div>
   );
 }
 
