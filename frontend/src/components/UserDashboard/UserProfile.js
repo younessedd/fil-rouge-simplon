@@ -1,7 +1,8 @@
 // REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState, useEffect } from 'react';
-import { usersAPI } from '../../services/api';  // API service for user operations
+//import { usersAPI } from '../../services/api';  // API service for user operations
 import './UserProfile.css';  // Component-specific styles
+import { usersAPI } from '../../services/api/users.api';
 
 // USER PROFILE COMPONENT - User profile management and editing interface
 const UserProfile = ({ user, onViewChange, showNotification }) => {

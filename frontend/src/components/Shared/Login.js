@@ -1,6 +1,8 @@
 // IMPORT SECTION - React, API, and styles
 import React, { useState } from 'react';
-import { authAPI } from '../../services/api';  // Authentication API calls
+//import { authAPI } from '../../services/api';  // Authentication API calls
+
+import { authAPI } from '../../services/api/auth.api';
 import './Login.css';  // Import component-specific styles
 
 // LOGIN COMPONENT - User authentication form

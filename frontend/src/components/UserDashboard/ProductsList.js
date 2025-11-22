@@ -1,9 +1,9 @@
 // REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState, useEffect } from 'react';
 import ProductItem from './ProductItem';  // Individual product display component
-import { productsAPI } from '../../services/api';  // API service for product operations
+//import { productsAPI } from '../../services/api';  // API service for product operations
 import './ProductsList.css';  // Component-specific styles
-
+import { productsAPI } from '../../services/api/products.api';
 // PRODUCTS LIST COMPONENT - Main product catalog and search interface
 const ProductsList = ({ user, onViewChange, showNotification }) => {
   // STATE MANAGEMENT - Component state variables

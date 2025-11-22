@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ordersAPI } from '../../services/api';
+//import { ordersAPI } from '../../services/api';
+import { ordersAPI } from '../../services/api/orders.api';
 import './OrdersManagement.css';
 
 // ORDERS MANAGEMENT COMPONENT - Admin interface for order management

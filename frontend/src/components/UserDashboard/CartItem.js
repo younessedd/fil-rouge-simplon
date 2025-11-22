@@ -1,6 +1,8 @@
 // REACT IMPORT - Core React functionality
 import React from 'react';
-import { getProductImageUrl } from '../../services/api';  // API service for product images
+//import { getProductImageUrl } from '../../services/api';  // API service for product images
+
+import { getProductImageUrl } from '../../services/api/api.config';
 import './CartItem.css';  // Component-specific styles
 
 // CART ITEM COMPONENT - Individual cart item display with removal functionality
@@ -30,7 +32,7 @@ const CartItem = ({ item, onRemove }) => {
 
   // ENHANCED IMAGE URL GETTER - Generate product image URL with fallback
   const getImageUrl = (item) => {
-    if (!item) return 'https://via.placeholder.com/300x300/ECF4E8/93BFC7?text=No+Image';  // Fallback image
+    if (!item) return 'https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=';  // Fallback image
     
     const imagePath = item.product?.image || item.image;  // Extract image path
     return getProductImageUrl(imagePath);  // Generate full image URL
@@ -67,7 +69,7 @@ const CartItem = ({ item, onRemove }) => {
           className="cart-item-image"
           onError={(e) => {
             // FALLBACK IMAGE HANDLER - Replace broken images with placeholder
-            e.target.src = 'https://via.placeholder.com/400x300/ECF4E8/93BFC7?text=No+Image';
+            e.target.src = 'https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=';
           }}
         />
       </div>

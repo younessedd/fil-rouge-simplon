@@ -1,7 +1,10 @@
 // REACT IMPORTS
 import React, { useState, useEffect } from 'react';
-import { productsAPI, categoriesAPI, getProductImageUrl } from '../../services/api';
+//import { productsAPI, categoriesAPI, getProductImageUrl } from '../../services/api';
 import './ProductsManagement.css';
+import { productsAPI } from '../../services/api/products.api';
+import { categoriesAPI } from '../../services/api/categories.api';
+import { getProductImageUrl } from '../../services/api/api.config';
 
 // PRODUCTS MANAGEMENT COMPONENT - Administrative interface for product management
 const ProductsManagement = () => {
@@ -541,7 +544,7 @@ const ProductsManagement = () => {
                 alt={product.name}
                 className="product-image-mobile"
                 onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/80x80/CCCCCC/FFFFFF?text=No+Image';
+                  e.target.src = 'https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=';
                 }}
               />
             </div>
@@ -595,8 +598,7 @@ const ProductsManagement = () => {
               alt={product.name}
               className="product-image-table"
               onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/60x60/CCCCCC/FFFFFF?text=No+Image';
-              }}
+                e.target.src ='https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=' }}
             />
           </div>
         </td>

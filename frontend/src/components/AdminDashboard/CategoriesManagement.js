@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { categoriesAPI } from '../../services/api';
+//import { categoriesAPI } from '../../services/api';
+
+import { categoriesAPI } from '../../services/api/categories.api';
 import './CategoriesManagement.css';
 
 // CATEGORIES MANAGEMENT COMPONENT - Admin interface for category management

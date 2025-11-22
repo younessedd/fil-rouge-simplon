@@ -1,7 +1,8 @@
 // REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState, useEffect } from 'react';
-import { ordersAPI } from '../../services/api';  // API service for order operations
+//import { ordersAPI } from '../../services/api';  // API service for order operations
 import './UserOrders.css';  // Component-specific styles
+import { ordersAPI } from '../../services/api/orders.api';
 
 // USER ORDERS COMPONENT - Order history and management interface
 const UserOrders = ({ onViewChange, showNotification }) => {

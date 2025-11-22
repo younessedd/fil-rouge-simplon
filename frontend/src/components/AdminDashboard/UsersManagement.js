@@ -1,6 +1,7 @@
 // REACT IMPORTS
 import React, { useState, useEffect } from 'react';
-import { usersAPI } from '../../services/api';
+//import { usersAPI } from '../../services/api';
+import { usersAPI } from '../../services/api/users.api';
 import './UsersManagement.css';
 
 // USERS MANAGEMENT COMPONENT - Administrative interface for user management

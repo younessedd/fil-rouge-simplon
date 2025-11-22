@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { productsAPI, categoriesAPI } from '../../services/api';
+//import { productsAPI, categoriesAPI } from '../../services/api';
+
+import { productsAPI } from '../../services/api/products.api';
+import { categoriesAPI } from '../../services/api/categories.api';
 import './AdminHome.css';
 
 // ADMIN HOME COMPONENT - Dashboard for product overview and management
@@ -270,7 +273,7 @@ const AdminHome = ({ currentView, onViewChange, showNotification }) => {
     // IMAGE URL HANDLER - Process and validate product image URLs
     const getProductImage = (imagePath) => {
       if (!imagePath) {
-        return 'https://via.placeholder.com/400x300/CCCCCC/FFFFFF?text=No+Image';
+        return 'https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=';
       }
       
       if (imagePath.startsWith('http')) {
@@ -327,8 +330,7 @@ const AdminHome = ({ currentView, onViewChange, showNotification }) => {
             alt={product.name}
             className="product-image-large"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/400x300/CCCCCC/FFFFFF?text=No+Image';
-            }}
+              e.target.src ='https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=' }}
           />
         </div>
         

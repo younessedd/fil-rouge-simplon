@@ -1,8 +1,8 @@
 // REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState } from 'react';
-import { cartAPI, getProductImageUrl } from '../../services/api';  // API services for cart and images
+//import { cartAPI, getProductImageUrl } from '../../services/api';  // API services for cart and images
 import './ProductItem.css';  // Component-specific styles
-
+import { cartAPI } from '../../services/api/cart.api';import { getProductImageUrl } from '../../services/api/api.config';
 // PRODUCT ITEM COMPONENT - Individual product display with cart functionality
 const ProductItem = ({ product, showNotification }) => {
   // STATE MANAGEMENT - Component state variables
@@ -83,7 +83,7 @@ const ProductItem = ({ product, showNotification }) => {
             className="product-image"
             onError={(e) => {
               // FALLBACK IMAGE - Show placeholder if image fails to load
-              e.target.src = 'https://via.placeholder.com/400x300/ECF4E8/93BFC7?text=No+Image';
+              e.target.src = 'https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=';
             }}
           />
         </div>
@@ -146,7 +146,7 @@ const ProductItem = ({ product, showNotification }) => {
                     alt={product.name}
                     onError={(e) => {
                       // FALLBACK IMAGE - Show placeholder if image fails to load
-                      e.target.src = 'https://via.placeholder.com/150x150/ECF4E8/93BFC7?text=No+Image';
+                      e.target.src = 'https://media.istockphoto.com/id/1071359118/vector/missing-image-vector-illustration-no-image-available-vector-concept.jpg?s=612x612&w=0&k=20&c=ukQmxO3tnUxz6mk7akh7aRCw_nyO9mmuvabs9FDPpfw=';
                     }}
                   />
                 </div>

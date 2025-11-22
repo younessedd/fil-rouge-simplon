@@ -1,9 +1,9 @@
 // REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState, useEffect } from 'react';
 import CartItem from './CartItem';  // Individual cart item component
-import { cartAPI } from '../../services/api';  // API service for cart operations
+//import { cartAPI } from '../../services/api';  // API service for cart operations
 import './ShoppingCart.css';  // Component-specific styles
-
+import { cartAPI } from '../../services/api/cart.api';
 // SHOPPING CART COMPONENT - Cart management and checkout interface
 const ShoppingCart = ({ onViewChange, showNotification }) => {
   // STATE MANAGEMENT - Component state variables
