@@ -1,0 +1,152 @@
+/* ===== GENERAL RESET ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.hero-page-container {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* ===== HERO SECTION ===== */
+.hero-section {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+}
+
+.hero-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-slide {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.hero-slide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45); /* darker overlay for readability */
+  z-index: 1;
+}
+
+.hero-overlay {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.hero-content {
+  color: #fff;
+  max-width: 700px;
+  padding: 0 20px;
+  animation: fadeInUp 1s ease-out;
+}
+
+.hero-title {
+  font-size: 3.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6);
+  letter-spacing: 1px;
+}
+
+.hero-description {
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  opacity: 0.95;
+}
+
+/* ===== BUTTON ===== */
+.login-btn {
+  padding: 14px 42px;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, #2596be, #2587be);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #25a5be, #2596be);
+  transform: translateY(-2px);
+}
+
+/* ===== SWIPER PAGINATION ===== */
+.swiper-pagination-bullet {
+  background: #ffffff;
+  opacity: 0.5;
+  width: 12px;
+  height: 12px;
+}
+
+.swiper-pagination-bullet-active {
+  background: #2596be;
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.4rem;
+  }
+  
+  .hero-description {
+    font-size: 1.05rem;
+  }
+  
+  .login-btn {
+    padding: 12px 36px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.9rem;
+  }
+  
+  .hero-description {
+    font-size: 0.95rem;
+  }
+  
+  .login-btn {
+    padding: 10px 28px;
+    font-size: 0.95rem;
+  }
+}

@@ -1,21 +1,43 @@
+// REACT IMPORTS
 import React, { useState, useEffect } from 'react';
 import { productsAPI, categoriesAPI, getProductImageUrl } from '../../services/api';
+import './ProductsManagement.css';
 
+// PRODUCTS MANAGEMENT COMPONENT - Administrative interface for product management
 const ProductsManagement = () => {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  // ===== STATE MANAGEMENT =====
   
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [perPage] = useState(10);
+  // Product data states
+  const [products, setProducts] = useState([]);           // Current displayed products
+  const [categories, setCategories] = useState([]);       // Available categories
+  const [loading, setLoading] = useState(true);           // Initial loading state
+  
+  // Modal visibility states
+  const [showEditModal, setShowEditModal] = useState(false);      // Edit product modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);  // Delete confirmation modal
+  
+  // Selected product and form states
+  const [selectedProduct, setSelectedProduct] = useState(null);   // Product being edited/deleted
+  const [formLoading, setFormLoading] = useState(false);          // Form submission loading
+  const [searchQuery, setSearchQuery] = useState('');             // Search input value
+  
+  // Notification state
+  const [notification, setNotification] = useState({ 
+    show: false, 
+    message: '', 
+    type: '' 
+  });
+  
+  // Responsive design state
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);      // Current page number
+  const [lastPage, setLastPage] = useState(1);            // Total number of pages
+  const [totalProducts, setTotalProducts] = useState(0);  // Total products count
+  const [perPage] = useState(10);                         // Products per page
 
+  // Form data state for product creation/editing
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -25,16 +47,65 @@ const ProductsManagement = () => {
     image: null
   });
 
+  // ===== UTILITY FUNCTIONS =====
+
+  /**
+   * Format price with DH Maroc currency
+   * @param {number} price - Product price
+   * @returns {string} Formatted price string
+   */
+  const formatPrice = (price) => {
+    return `${parseFloat(price).toFixed(2)} DH`;
+  };
+
+  // ===== EFFECT HOOKS =====
+
+  // Detect screen size for responsive behavior
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkScreenSize(); // Initial check
+    window.addEventListener('resize', checkScreenSize); // Listen for resize events
+    
+    // Cleanup function to remove event listener
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // Fetch products and categories when component mounts or page changes
   useEffect(() => {
     fetchProducts(currentPage);
     fetchCategories();
   }, [currentPage]);
 
+  // ===== NOTIFICATION SYSTEM =====
+
+  /**
+   * Display toast notification to user
+   * @param {string} message - Notification message
+   * @param {string} type - Notification type (success, error, info, warning)
+   */
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    // Auto-hide notification after 4 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: '' });
+    }, 4000);
+  };
+
+  // ===== DATA FETCHING FUNCTIONS =====
+
+  /**
+   * Fetch products from API with pagination
+   * @param {number} page - Page number to fetch
+   */
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
       const response = await productsAPI.getAll(page);
       
+      // Update state with fetched data
       setProducts(response.data.data);
       setLastPage(response.data.last_page || 1);
       setCurrentPage(response.data.current_page || 1);
@@ -42,12 +113,15 @@ const ProductsManagement = () => {
       
     } catch (error) {
       console.error('Error fetching products:', error);
-      alert('Failed to load products');
+      showNotification('Failed to load products', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Fetch all categories from API
+   */
   const fetchCategories = async () => {
     try {
       const response = await categoriesAPI.getAll();
@@ -57,48 +131,110 @@ const ProductsManagement = () => {
     }
   };
 
+  // ===== SEARCH FUNCTIONALITY =====
+
+  /**
+   * Search products by ID, name, or description
+   */
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
+      // Reset to show all products if search is empty
       fetchProducts(1);
       return;
     }
 
     try {
       setLoading(true);
-      const response = await productsAPI.search(searchQuery);
+      
+      // If search query is a number, try to fetch by ID first
+      if (!isNaN(searchQuery.trim())) {
+        try {
+          const response = await productsAPI.getById(parseInt(searchQuery.trim()));
+          if (response.data) {
+            setProducts([response.data]);
+            setTotalProducts(1);
+            setLastPage(1);
+            setCurrentPage(1);
+            showNotification(`Product found by ID: ${searchQuery}`, 'success');
+            return;
+          }
+        } catch (idError) {
+          console.log('Product not found by ID, searching by name...');
+        }
+      }
+
+      // Search by name or description
+      const response = await productsAPI.search(searchQuery.trim());
       
       let searchResults = [];
-      if (response.data && response.data.data) {
-        searchResults = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        searchResults = response.data;
-      } else {
-        searchResults = [];
+      
+      // Handle different response structures
+      if (response.data) {
+        if (response.data.data) {
+          searchResults = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          searchResults = response.data;
+        }
+      } else if (Array.isArray(response)) {
+        searchResults = response;
       }
       
-      // Filter by ID if search query is a number
-      if (!isNaN(searchQuery)) {
-        const idSearchResults = searchResults.filter(product => 
-          product.id.toString().includes(searchQuery)
-        );
-        setProducts(idSearchResults);
-        setTotalProducts(idSearchResults.length);
-      } else {
-        setProducts(searchResults);
-        setTotalProducts(searchResults.length);
-      }
+      // Filter results for better accuracy
+      const filteredResults = searchResults.filter(product => {
+        const query = searchQuery.toLowerCase().trim();
+        
+        // Search in product name
+        if (product.name && product.name.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Search in product description
+        if (product.description && product.description.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        return false; // No matches found
+      });
       
+      // Update state with search results
+      setProducts(filteredResults);
+      setTotalProducts(filteredResults.length);
       setLastPage(1);
       setCurrentPage(1);
       
+      // Show appropriate notification
+      if (filteredResults.length > 0) {
+        showNotification(`Found ${filteredResults.length} product(s)`, 'success');
+      } else {
+        showNotification('No products found for your search', 'info');
+      }
+      
     } catch (error) {
       console.error('Error searching products:', error);
+      showNotification('Search failed: ' + (error.response?.data?.message || error.message), 'error');
       setProducts([]);
+      setTotalProducts(0);
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Handle Enter key press in search input
+   * @param {Object} e - Keyboard event
+   */
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // ===== FORM HANDLING =====
+
+  /**
+   * Handle input changes in form fields
+   * @param {Object} e - Input change event
+   */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -107,6 +243,10 @@ const ProductsManagement = () => {
     }));
   };
 
+  /**
+   * Handle file input changes for product images
+   * @param {Object} e - File input change event
+   */
   const handleFileChange = (e) => {
     setFormData(prev => ({
       ...prev,
@@ -114,6 +254,10 @@ const ProductsManagement = () => {
     }));
   };
 
+  /**
+   * Handle form submission for creating/updating products
+   * @param {Object} e - Form submit event
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormLoading(true);
@@ -121,6 +265,7 @@ const ProductsManagement = () => {
     try {
       const submitData = new FormData();
       
+      // Append form data to FormData object
       submitData.append('name', formData.name);
       submitData.append('description', formData.description || '');
       submitData.append('price', formData.price);
@@ -134,24 +279,31 @@ const ProductsManagement = () => {
         submitData.append('image', formData.image);
       }
 
+      // API call based on context (create or update)
       if (selectedProduct) {
         await productsAPI.update(selectedProduct.id, submitData);
-        alert('Product updated successfully');
+        showNotification('Product updated successfully!', 'success');
       } else {
         await productsAPI.create(submitData);
-        alert('Product added successfully');
+        showNotification('Product added successfully!', 'success');
       }
 
       closeModals();
-      fetchProducts(currentPage);
+      fetchProducts(currentPage); // Refresh product list
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Failed to save product: ' + error.message);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save product';
+      showNotification(`${errorMessage}`, 'error');
     } finally {
       setFormLoading(false);
     }
   };
 
+  // ===== MODAL MANAGEMENT =====
+
+  /**
+   * Close all modals and reset form data
+   */
   const closeModals = () => {
     setFormData({
       name: '',
@@ -166,252 +318,451 @@ const ProductsManagement = () => {
     setShowDeleteModal(false);
   };
 
+  /**
+   * Open edit modal with product data
+   * @param {Object} product - Product object to edit
+   */
   const handleEdit = (product) => {
     setSelectedProduct(product);
+    // Pre-populate form with product data
     setFormData({
       name: product.name,
       description: product.description || '',
       price: product.price,
       stock: product.stock,
       category_id: product.category_id || '',
-      image: null
+      image: null // Don't pre-fill image for security
     });
     setShowEditModal(true);
   };
 
+  /**
+   * Open delete confirmation modal
+   * @param {Object} product - Product object to delete
+   */
   const openDeleteModal = (product) => {
     setSelectedProduct(product);
     setShowDeleteModal(true);
   };
 
+  /**
+   * Delete product from system
+   */
   const handleDelete = async () => {
     if (!selectedProduct) return;
 
+    const productIdToDelete = selectedProduct.id;
+    const productName = selectedProduct.name;
+    
     try {
-      await productsAPI.delete(selectedProduct.id);
-      alert('Product deleted successfully');
+      setFormLoading(true);
+      
+      await productsAPI.delete(productIdToDelete);
+      
+      // Update local state immediately for better UX
+      const updatedProducts = products.filter(product => product.id !== productIdToDelete);
+      setProducts(updatedProducts);
+      setTotalProducts(prev => prev - 1);
+      
+      showNotification(`"${productName}" deleted successfully!`, 'success');
       closeModals();
-      fetchProducts(currentPage);
+      
+      // Adjust pagination if needed
+      if (updatedProducts.length === 0 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
+      
     } catch (error) {
-      console.error('Error deleting product:', error);
-      alert('Failed to delete product');
+      console.error('Delete error details:', error);
+      
+      // Verify if product was actually deleted
+      try {
+        await productsAPI.getById(productIdToDelete);
+        
+        // Product still exists - show error
+        const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           'Failed to delete product. Please try again.';
+        showNotification(`${errorMessage}`, 'error');
+        
+      } catch (getError) {
+        // Product doesn't exist - consider deletion successful
+        const updatedProducts = products.filter(product => product.id !== productIdToDelete);
+        setProducts(updatedProducts);
+        setTotalProducts(prev => prev - 1);
+        
+        showNotification(`"${productName}" deleted successfully!`, 'success');
+        closeModals();
+        
+        if (updatedProducts.length === 0 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
+      }
+    } finally {
+      setFormLoading(false);
     }
   };
 
+  // ===== PAGINATION FUNCTIONS =====
+
+  /**
+   * Handle page change in pagination
+   * @param {number} page - Page number to navigate to
+   */
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
+  /**
+   * Render pagination controls
+   * @returns {JSX.Element} Pagination component
+   */
   const renderPagination = () => {
     if (lastPage <= 1) return null;
 
     const pages = [];
-    const maxVisiblePages = 5;
+    const maxVisiblePages = isMobile ? 3 : 5;
 
+    // Calculate visible page range
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(lastPage, startPage + maxVisiblePages - 1);
 
+    // Adjust start page if needed
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
+    // First page button
     if (startPage > 1) {
       pages.push(
-        <button key="first" className="btn" onClick={() => handlePageChange(1)}>
-          ⏮️ First
+        <button key="first" className="pagination-btn" onClick={() => handlePageChange(1)}>
+          {isMobile ? '⏮️' : '⏮️ First'}
         </button>
       );
     }
 
+    // Previous page button
     if (currentPage > 1) {
       pages.push(
-        <button key="prev" className="btn" onClick={() => handlePageChange(currentPage - 1)}>
-          ◀️ Previous
+        <button key="prev" className="pagination-btn" onClick={() => handlePageChange(currentPage - 1)}>
+          {isMobile ? '◀️' : '◀️ Prev'}
         </button>
       );
     }
 
+    // Page number buttons
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
         <button
           key={i}
-          className={`btn ${currentPage === i ? 'btn-primary' : ''}`}
+          className={`pagination-btn ${currentPage === i ? 'pagination-active' : ''}`}
           onClick={() => handlePageChange(i)}
-          style={{ minWidth: '40px' }}
         >
           {i}
         </button>
       );
     }
 
+    // Next page button
     if (currentPage < lastPage) {
       pages.push(
-        <button key="next" className="btn" onClick={() => handlePageChange(currentPage + 1)}>
-          Next ▶️
+        <button key="next" className="pagination-btn" onClick={() => handlePageChange(currentPage + 1)}>
+          {isMobile ? '▶️' : 'Next ▶️'}
         </button>
       );
     }
 
+    // Last page button
     if (endPage < lastPage) {
       pages.push(
-        <button key="last" className="btn" onClick={() => handlePageChange(lastPage)}>
-          Last ⏭️
+        <button key="last" className="pagination-btn" onClick={() => handlePageChange(lastPage)}>
+          {isMobile ? '⏭️' : 'Last ⏭️'}
         </button>
       );
     }
 
     return (
-      <div className="card">
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          gap: '0.5rem',
-          flexWrap: 'wrap'
-        }}>
+      <div className="pagination-container">
+        <div className="pagination">
           {pages}
         </div>
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '1rem', 
-          color: '#666',
-          padding: '0.5rem'
-        }}>
+        <div className="pagination-info">
           Showing {products.length} of {totalProducts} products | Page {currentPage} of {lastPage}
         </div>
       </div>
     );
   };
 
+  // ===== REUSABLE COMPONENTS =====
+
+  /**
+   * Action buttons component for product operations
+   * @param {Object} props - Component props
+   * @param {Object} props.product - Product object
+   * @returns {JSX.Element} Action buttons
+   */
+  const ActionButtons = ({ product }) => (
+    <div className="action-buttons">
+      <button 
+        className="management-btn btn-edit"
+        onClick={() => handleEdit(product)}
+      >
+        Edit
+      </button>
+      <button 
+        className="management-btn btn-delete" 
+        onClick={() => openDeleteModal(product)}
+      >
+        Delete
+      </button>
+    </div>
+  );
+
+  /**
+   * Render product row based on screen size
+   * @param {Object} product - Product object
+   * @returns {JSX.Element} Product row component
+   */
+  const renderProductRow = (product) => {
+    const imageUrl = getProductImageUrl(product.image);
+    
+    // Determine stock level for styling
+    const stockClass = product.stock > 10 ? 'stock-high' : product.stock > 0 ? 'stock-medium' : 'stock-low';
+    const stockText = product.stock > 10 ? 'High' : product.stock > 0 ? 'Medium' : 'Low';
+
+    // Mobile card layout for small screens
+    if (isMobile && window.innerWidth <= 640) {
+      return (
+        <div key={product.id} className="data-card-mobile">
+          <div className="product-card-header">
+            <div className="product-image-container">
+              <img 
+                src={imageUrl} 
+                alt={product.name}
+                className="product-image-mobile"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/80x80/CCCCCC/FFFFFF?text=No+Image';
+                }}
+              />
+            </div>
+            <div className="product-basic-info">
+              <div className="product-name-mobile">{product.name}</div>
+              <div className="product-price-mobile">{formatPrice(product.price)}</div>
+            </div>
+          </div>
+          
+          <div className="product-card-body">
+            <div className="product-meta-row">
+              <span className="product-id-mobile">#{product.id}</span>
+              <span className={`stock-indicator ${stockClass}`}>
+                {product.stock} ({stockText})
+              </span>
+            </div>
+            
+            {/* Product description */}
+            {product.description && (
+              <div className="product-description-mobile">
+                {product.description.length > 80 
+                  ? `${product.description.substring(0, 80)}...` 
+                  : product.description
+                }
+              </div>
+            )}
+            
+            {/* Category tag */}
+            <div className="category-tag">
+              {product.category?.name || 'No category'}
+            </div>
+          </div>
+          
+          <div className="product-card-actions">
+            <ActionButtons product={product} />
+          </div>
+        </div>
+      );
+    }
+
+    // Desktop table layout for larger screens
+    return (
+      <tr key={product.id} className="product-row">
+        <td className="product-id-cell">
+          <strong>#{product.id}</strong>
+        </td>
+        <td>
+          <div className="product-image-container">
+            <img 
+              src={imageUrl} 
+              alt={product.name}
+              className="product-image-table"
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/60x60/CCCCCC/FFFFFF?text=No+Image';
+              }}
+            />
+          </div>
+        </td>
+        <td className="product-info-cell">
+          <div className="product-name">{product.name}</div>
+          {product.description && (
+            <div className="product-description">
+              {product.description.length > 60 
+                ? `${product.description.substring(0, 60)}...` 
+                : product.description
+              }
+            </div>
+          )}
+        </td>
+        <td className="product-price-cell">
+          <div className="product-price">{formatPrice(product.price)}</div>
+        </td>
+        <td className="stock-cell">
+          <div className={`stock-indicator ${stockClass}`}>
+            {product.stock} {!isMobile && `(${stockText})`}
+          </div>
+        </td>
+        <td className="category-cell">
+          <div className="category-tag">
+            {product.category?.name || 'No category'}
+          </div>
+        </td>
+        <td className="actions-cell">
+          <ActionButtons product={product} />
+        </td>
+      </tr>
+    );
+  };
+
+  // ===== RENDER COMPONENT =====
+
+  // Show loading state while fetching data
   if (loading) {
     return (
-      <div className="loading">
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div 
-            style={{
-              width: '50px',
-              height: '50px',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              marginBottom: '1rem'
-            }}
-          ></div>
-          <p style={{ color: '#666', margin: 0 }}>Loading products...</p>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading products...</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="card mb-2">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <h2>🛍️ Products Management</h2>
+    <div className="management-container">
+      {/* ===== FIXED ADD BUTTON ===== */}
+      <button 
+        className="fixed-add-button"
+        onClick={() => {
+          setSelectedProduct(null);
+          setFormData({
+            name: '',
+            description: '',
+            price: '',
+            stock: '',
+            category_id: '',
+            image: null
+          });
+          setShowEditModal(true);
+        }}
+        title="Add New Product"
+      >
+        +
+      </button>
+
+      {/* ===== NOTIFICATION SYSTEM ===== */}
+      {notification.show && (
+        <div className={`notification notification-${notification.type}`}>
+          <span className="notification-icon">
+            {notification.type === 'success' ? '✅' : 
+             notification.type === 'error' ? '❌' : 
+             notification.type === 'info' ? 'ℹ️' : '⚠️'}
+          </span>
+          <span className="notification-message">{notification.message}</span>
           <button 
-            className="btn btn-primary"
-            onClick={() => {
-              setSelectedProduct(null);
-              setFormData({
-                name: '',
-                description: '',
-                price: '',
-                stock: '',
-                category_id: '',
-                image: null
-              });
-              setShowEditModal(true);
-            }}
+            className="notification-close"
+            onClick={() => setNotification({ show: false, message: '', type: '' })}
           >
-            + Add Product
+            ✕
           </button>
         </div>
+      )}
 
-        {/* Search Bar - Updated to include ID search */}
-        <div style={{ marginTop: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* ===== HEADER SECTION ===== */}
+      <div className="management-card">
+        <div className="management-header">
+          <div className="header-title">
+            <h1>Products Management</h1>
+            <p className="header-subtitle">Manage your product inventory efficiently</p>
+          </div>
+        </div>
+
+        {/* ===== SEARCH SECTION ===== */}
+        <div className="search-container">
+          <div className="search-box">
             <input
               type="text"
-              placeholder="Search by product ID, name or description..."
+              placeholder="Search by product ID, name, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ 
-                flex: 1,
-                minWidth: '250px',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyPress={handleKeyPress}
+              className="search-input"
             />
-            <button className="btn btn-primary" onClick={handleSearch}>
-              🔍 Search
-            </button>
-            <button className="btn" onClick={() => {
-              setSearchQuery('');
-              fetchProducts(1);
-            }}>
-              🔄 Show All
-            </button>
+            <div className="search-actions">
+              <button className="management-btn btn-primary btn-search" onClick={handleSearch}>
+                Search
+              </button>
+              <button className="management-btn btn-secondary" onClick={() => {
+                setSearchQuery('');
+                fetchProducts(1);
+              }}>
+                Clear
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
-            💡 Search tip: You can search by Product ID, name, or description
+          <div className="search-tips">
+            Search tips: Enter product ID, name, or description to find specific products
           </div>
         </div>
       </div>
 
-      {/* Edit/Add Product Modal */}
+      {/* ===== EDIT/ADD PRODUCT MODAL ===== */}
       {showEditModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '800px' }}>
+          <div className="modal-content">
             <div className="modal-header">
-              <h3>{selectedProduct ? `✏️ Edit Product #${selectedProduct.id}` : '➕ Add New Product'}</h3>
+              <h3>{selectedProduct ? `Edit Product #${selectedProduct.id}` : 'Add New Product'}</h3>
               <button className="modal-close" onClick={closeModals}>✕</button>
             </div>
             
-            <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1.5rem' }}>
-                {/* Column 1 */}
-                <div>
+            <form onSubmit={handleSubmit} className="management-form">
+              <div className="form-grid">
+                <div className="form-group full-width">
+                  {/* Product ID display for editing */}
                   {selectedProduct && (
                     <div className="form-group">
-                      <label>Product ID:</label>
+                      <label>Product ID</label>
                       <input
                         type="text"
                         value={selectedProduct.id}
                         disabled
-                        style={{ 
-                          width: '100%', 
-                          backgroundColor: '#f8f9fa',
-                          color: '#666'
-                        }}
+                        className="form-input"
                       />
                     </div>
                   )}
 
+                  {/* Product Name Field */}
                   <div className="form-group">
-                    <label>Product Name: *</label>
+                    <label>Product Name *</label>
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      style={{ width: '100%' }}
+                      placeholder="Enter product name"
+                      className="form-input"
                     />
                   </div>
 
+                  {/* Price Field */}
                   <div className="form-group">
-                    <label>Price: *</label>
+                    <label>Price (DH) *</label>
                     <input
                       type="number"
                       name="price"
@@ -420,32 +771,34 @@ const ProductsManagement = () => {
                       required
                       step="0.01"
                       min="0"
-                      style={{ width: '100%' }}
+                      placeholder="0.00"
+                      className="form-input"
                     />
+                    <small className="price-hint">Price in Moroccan Dirham (DH)</small>
                   </div>
 
+                  {/* Stock Field */}
                   <div className="form-group">
-                    <label>Stock:</label>
+                    <label>Stock Quantity</label>
                     <input
                       type="number"
                       name="stock"
                       value={formData.stock}
                       onChange={handleInputChange}
                       min="0"
-                      style={{ width: '100%' }}
+                      placeholder="0"
+                      className="form-input"
                     />
                   </div>
-                </div>
 
-                {/* Column 2 */}
-                <div>
+                  {/* Category Selection */}
                   <div className="form-group">
-                    <label>Category:</label>
+                    <label>Category</label>
                     <select
                       name="category_id"
                       value={formData.category_id}
                       onChange={handleInputChange}
-                      style={{ width: '100%' }}
+                      className="form-input"
                     >
                       <option value="">Select Category</option>
                       {categories.map(category => (
@@ -456,44 +809,36 @@ const ProductsManagement = () => {
                     </select>
                   </div>
 
+                  {/* Description Field */}
                   <div className="form-group">
-                    <label>Description:</label>
+                    <label>Description</label>
                     <textarea
                       name="description"
                       value={formData.description}
                       onChange={handleInputChange}
                       placeholder="Product description (optional)"
-                      style={{ 
-                        width: '100%', 
-                        height: '120px',
-                        resize: 'vertical'
-                      }}
+                      rows="4"
+                      className="form-input form-textarea"
                     />
                   </div>
 
+                  {/* Image Upload Field */}
                   <div className="form-group">
-                    <label>Product Image:</label>
+                    <label>Product Image</label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={handleFileChange}
-                      style={{ width: '100%' }}
+                      className="form-input"
                     />
+                    {/* Show current image when editing */}
                     {selectedProduct && selectedProduct.image && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <p style={{ margin: '0.5rem 0', fontSize: '0.9rem', color: '#666' }}>
-                          Current Image:
-                        </p>
+                      <div className="current-image">
+                        <p>Current Image:</p>
                         <img 
                           src={getProductImageUrl(selectedProduct.image)} 
                           alt="Current"
-                          style={{ 
-                            width: '100px', 
-                            height: '100px', 
-                            objectFit: 'cover', 
-                            borderRadius: '4px',
-                            border: '1px solid #ddd'
-                          }}
+                          className="current-product-image"
                         />
                       </div>
                     )}
@@ -501,43 +846,28 @@ const ProductsManagement = () => {
                 </div>
               </div>
 
-              <div style={{ 
-                display: 'flex', 
-                gap: '1rem', 
-                justifyContent: 'flex-end',
-                marginTop: '1.5rem',
-                padding: '1.5rem',
-                borderTop: '1px solid #eee'
-              }}>
+              {/* Form Actions */}
+              <div className="form-actions">
                 <button 
                   type="button" 
-                  className="btn" 
+                  className="management-btn btn-secondary" 
                   onClick={closeModals}
                   disabled={formLoading}
-                  style={{ minWidth: '100px' }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn btn-primary"
+                  className="management-btn btn-primary"
                   disabled={formLoading}
-                  style={{ minWidth: '120px' }}
                 >
                   {formLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid white',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite'
-                      }}></div>
+                    <span className="loading-content">
+                      <div className="loading-spinner-small"></div>
                       Saving...
                     </span>
                   ) : (
-                    selectedProduct ? '💾 Update Product' : '➕ Add Product'
+                    selectedProduct ? 'Update Product' : 'Add Product'
                   )}
                 </button>
               </div>
@@ -546,35 +876,46 @@ const ProductsManagement = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* ===== DELETE CONFIRMATION MODAL ===== */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>🗑️ Delete Product</h3>
+              <h3>Delete Product</h3>
               <button className="modal-close" onClick={closeModals}>✕</button>
             </div>
             
-            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem' }}>
+            <div className="delete-modal-content">
+              <div className="delete-icon">⚠️</div>
+              <h4>Confirm Deletion</h4>
+              <p>
                 Are you sure you want to delete product <strong>"{selectedProduct?.name}"</strong> (ID: {selectedProduct?.id})?
               </p>
-              <p style={{ color: '#e74c3c', marginBottom: '1.5rem' }}>
-                This action cannot be undone!
-              </p>
+              <div className="delete-warning">
+                This action cannot be undone and all product data will be permanently lost!
+              </div>
               
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <div className="delete-actions">
                 <button 
-                  className="btn" 
+                  className="management-btn btn-secondary" 
                   onClick={closeModals}
+                  disabled={formLoading}
                 >
                   Cancel
                 </button>
                 <button 
-                  className="btn btn-danger" 
+                  className="management-btn btn-danger" 
                   onClick={handleDelete}
+                  disabled={formLoading}
                 >
-                  Yes, Delete
+                  {formLoading ? (
+                    <span className="loading-content">
+                      <div className="loading-spinner-small"></div>
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Confirm Delete'
+                  )}
                 </button>
               </div>
             </div>
@@ -582,154 +923,71 @@ const ProductsManagement = () => {
         </div>
       )}
 
-      <div className="card">
-        <h3>Products List ({totalProducts})</h3>
+      {/* ===== PRODUCTS LIST SECTION ===== */}
+      <div className="management-card">
+        <div className="section-header">
+          <h3>Products List</h3>
+          <div className="products-count">
+            {totalProducts} product{totalProducts !== 1 ? 's' : ''} total
+          </div>
+        </div>
         
+        {/* Empty state when no products found */}
         {products.length === 0 ? (
-          <div className="text-center" style={{ padding: '2rem' }}>
-            <p>No products found</p>
-            {searchQuery && (
-              <p style={{ color: '#666', marginTop: '0.5rem' }}>
-                No results for "{searchQuery}"
-              </p>
+          <div className="empty-state">
+            <div className="empty-icon">📭</div>
+            <h4>No Products Found</h4>
+            <p>
+              {searchQuery 
+                ? `No results found for "${searchQuery}"`
+                : 'There are no products in your inventory yet.'
+              }
+            </p>
+            {/* Call to action for empty state */}
+            {!searchQuery && (
+              <button 
+                className="management-btn btn-primary"
+                onClick={() => setShowEditModal(true)}
+              >
+                Add Your First Product
+              </button>
             )}
           </div>
         ) : (
           <>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Image</th>
-                  <th>Name</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Category</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(product => {
-                  const imageUrl = getProductImageUrl(product.image);
-                  
-                  return (
-                    <tr key={product.id}>
-                      <td>
-                        <strong>#{product.id}</strong>
-                      </td>
-                      <td>
-                        <div style={{ width: '50px', height: '50px', overflow: 'hidden', borderRadius: '4px' }}>
-                          <img 
-                            src={imageUrl} 
-                            alt={product.name}
-                            style={{ 
-                              width: '100%', 
-                              height: '100%', 
-                              objectFit: 'cover' 
-                            }}
-                            onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/50x50/CCCCCC/FFFFFF?text=No+Image';
-                            }}
-                          />
-                        </div>
-                      </td>
-                      <td>{product.name}</td>
-                      <td>{product.price} SAR</td>
-                      <td>
-                        <span style={{
-                          color: product.stock > 10 ? '#27ae60' : product.stock > 0 ? '#f39c12' : '#e74c3c',
-                          fontWeight: 'bold'
-                        }}>
-                          {product.stock}
-                        </span>
-                      </td>
-                      <td>{product.category?.name || 'No category'}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button 
-                            className="btn"
-                            onClick={() => handleEdit(product)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button 
-                            className="btn btn-danger"
-                            onClick={() => openDeleteModal(product)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </td>
+            {/* Responsive layout based on screen size */}
+            {isMobile && window.innerWidth <= 640 ? (
+              // Mobile card layout
+              <div className="data-grid-mobile">
+                {products.map(product => renderProductRow(product))}
+              </div>
+            ) : (
+              // Desktop table layout
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Image</th>
+                      <th>Product</th>
+                      <th>Price (DH)</th>
+                      <th>Stock</th>
+                      <th>Category</th>
+                      <th>Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {products.map(product => renderProductRow(product))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             
+            {/* Pagination controls */}
             {renderPagination()}
           </>
         )}
       </div>
-
-      <style>
-        {`
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 1rem;
-          }
-
-          .modal-content {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-          }
-
-          .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            border-bottom: 1px solid #eee;
-          }
-
-          .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #666;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .modal-close:hover {
-            color: #000;
-          }
-
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 };

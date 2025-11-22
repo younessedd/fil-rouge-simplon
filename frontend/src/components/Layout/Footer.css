@@ -1,0 +1,139 @@
+/* ===== CSS VARIABLES - Green Color Palette Definition ===== */
+:root {
+  /* FOOTER COLORS - Consistent with your green theme */
+  --footer-bg: #ECF4E8;           /* Light green background from palette */
+  --footer-text: #2D3748;         /* Professional dark gray for text */
+  --footer-accent: #93BFC7;       /* Blue-green accent color */
+  --footer-border: #ABE7B2;       /* Primary green for borders */
+  --footer-highlight: #CBF3BB;    /* Light green for hover states */
+}
+
+/* ===== MAIN FOOTER CONTAINER ===== */
+.footer {
+  background: var(--footer-bg);           /* Light green background */
+  color: var(--footer-text);              /* Dark text for readability */
+  padding: 3rem 0 2rem;                   /* Top, bottom padding: 3rem, 2rem */
+  margin-top: auto;                       /* Push footer to bottom of layout */
+  border-top: 3px solid var(--footer-border);  /* Primary green top border */
+  width: 100%;                            /* Full viewport width */
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);  /* Subtle upward shadow */
+}
+
+/* ===== FOOTER CONTENT CONTAINER ===== */
+.footer .container {
+  display: flex;
+  flex-direction: column;          /* Vertical content stacking */
+  align-items: center;             /* Horizontal center alignment */
+  text-align: center;              /* Center text alignment */
+  gap: 2rem;                       /* Space between copyright and info sections */
+  max-width: 1200px;               /* Maximum content width for large screens */
+  margin: 0 auto;                  /* Horizontal center alignment */
+  padding: 0 2rem;                 /* Horizontal padding for content spacing */
+}
+
+/* ===== COPYRIGHT TEXT STYLING ===== */
+.footer p {
+  margin: 0;                       /* Remove default paragraph margins */
+  font-size: 1.1rem;               /* Slightly larger font size */
+  font-weight: 600;                /* Semi-bold for emphasis */
+  color: var(--footer-text);       /* Dark gray text color */
+  opacity: 0.9;                    /* Slight transparency for subtle effect */
+}
+
+/* ===== ADDITIONAL INFORMATION GRID ===== */
+.footer-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));  /* Responsive columns */
+  gap: 3rem;                       /* Space between grid items */
+  margin-top: 2rem;                /* Space above info sections */
+  padding-top: 2rem;               /* Space above top border */
+  border-top: 2px solid var(--footer-accent);  /* Blue-green accent border */
+  width: 100%;                     /* Full container width */
+  max-width: 1000px;               /* Limit maximum width */
+}
+
+/* ===== INDIVIDUAL INFO SECTION CARDS ===== */
+.info-section {
+  text-align: center;              /* Center align all text */
+  padding: 1.5rem;                 /* Internal spacing */
+  border-radius: 12px;             /* Rounded corners for modern look */
+  background: rgba(255, 255, 255, 0.7);  /* Semi-transparent white overlay */
+  backdrop-filter: blur(10px);     /* Glass morphism blur effect */
+  border: 1px solid rgba(171, 231, 178, 0.3);  /* Subtle green border */
+  transition: all 0.3s ease;       /* Smooth transition for hover effects */
+}
+
+/* INFO SECTION HOVER EFFECT - Interactive feedback */
+.info-section:hover {
+  background: rgba(255, 255, 255, 0.9);  /* More opaque white on hover */
+  transform: translateY(-5px);     /* Lift animation effect */
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);  /* Enhanced shadow on hover */
+  border-color: var(--footer-highlight);  /* Light green border highlight */
+}
+
+/* ===== SECTION HEADING STYLING ===== */
+.info-section h4 {
+  margin-bottom: 1rem;             /* Space below heading */
+  font-size: 1.2rem;               /* Larger font for hierarchy */
+  font-weight: 700;                /* Bold weight for emphasis */
+  color: var(--footer-text);       /* Dark text color */
+  text-transform: uppercase;       /* Uppercase for stylistic choice */
+  letter-spacing: 1px;             /* Increased letter spacing */
+}
+
+/* ===== SECTION CONTENT STYLING ===== */
+.info-section p {
+  font-size: 0.95rem;              /* Slightly smaller than body text */
+  line-height: 1.6;                /* Comfortable reading line height */
+  margin: 0;                       /* Remove default margins */
+  color: var(--footer-text);       /* Dark gray text color */
+  opacity: 0.8;                    /* Subtle transparency */
+}
+
+/* ===== RESPONSIVE DESIGN BREAKPOINTS ===== */
+
+/* TABLET STYLES - Screens 768px width and below */
+@media (max-width: 768px) {
+  .footer {
+    padding: 2rem 0 1.5rem;        /* Reduced vertical padding */
+  }
+  
+  .footer .container {
+    padding: 0 1.5rem;             /* Reduced horizontal padding */
+    gap: 1.5rem;                   /* Reduced space between elements */
+  }
+  
+  .footer-info {
+    grid-template-columns: 1fr;    /* Single column layout */
+    gap: 1.5rem;                   /* Reduced gap between sections */
+    margin-top: 1.5rem;            /* Reduced top margin */
+    padding-top: 1.5rem;           /* Reduced top padding */
+  }
+  
+  .info-section {
+    padding: 1.25rem;              /* Reduced internal padding */
+  }
+  
+  .info-section h4 {
+    font-size: 1.1rem;             /* Slightly smaller heading */
+  }
+}
+
+/* MOBILE STYLES - Screens 480px width and below */
+@media (max-width: 480px) {
+  .footer {
+    padding: 1.5rem 0 1rem;        /* Compact vertical padding */
+  }
+  
+  .footer .container {
+    padding: 0 1rem;               /* Minimal horizontal padding */
+  }
+  
+  .footer p {
+    font-size: 1rem;               /* Standard font size */
+  }
+  
+  .info-section {
+    padding: 1rem;                 /* Compact internal padding */
+  }
+}

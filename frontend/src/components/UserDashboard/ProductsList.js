@@ -1,358 +1,313 @@
+// REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState, useEffect } from 'react';
-import ProductItem from './ProductItem';
-import { productsAPI } from '../../services/api';
+import ProductItem from './ProductItem';  // Individual product display component
+import { productsAPI } from '../../services/api';  // API service for product operations
+import './ProductsList.css';  // Component-specific styles
 
-const ProductsList = ({ user, onViewChange }) => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(0);
+// PRODUCTS LIST COMPONENT - Main product catalog and search interface
+const ProductsList = ({ user, onViewChange, showNotification }) => {
+  // STATE MANAGEMENT - Component state variables
+  const [products, setProducts] = useState([]);          // Current displayed products
+  const [allProducts, setAllProducts] = useState([]);    // All products for search filtering
+  const [loading, setLoading] = useState(true);          // Loading state for data fetch
+  const [currentPage, setCurrentPage] = useState(1);     // Current pagination page
+  const [lastPage, setLastPage] = useState(1);           // Total number of pages
+  const [totalProducts, setTotalProducts] = useState(0); // Total products count
+  const [searchQuery, setSearchQuery] = useState('');    // Search input value
 
+  // EFFECT HOOK - Fetch products when user or page changes
   useEffect(() => {
-    fetchProducts();
-  }, [currentPage]);
+    if (user) {
+      fetchProducts(currentPage);  // Fetch products if user is authenticated
+    } else {
+      setLoading(false);  // Stop loading if no user
+    }
+  }, [user, currentPage]);  // Dependencies: user authentication and current page
 
-  const fetchProducts = async () => {
+  // FETCH PRODUCTS FUNCTION - Retrieve products from API with pagination
+  const fetchProducts = async (page = 1) => {
     try {
-      setLoading(true);
-      console.log('Fetching products...');
+      setLoading(true);  // Start loading state
+      const response = await productsAPI.getAll(page);  // API call with page parameter
       
-      const response = await productsAPI.getAll(currentPage);
-      console.log('Server response:', response);
-
-      // Handle different response formats
-      let productsData = [];
-      let total = 0;
-      let lastPage = 1;
-
-      if (response.data && response.data.data) {
-        // Response with pagination
-        productsData = response.data.data;
-        total = response.data.total || productsData.length;
-        lastPage = response.data.last_page || 1;
-      } else if (Array.isArray(response.data)) {
-        // Response as direct array
-        productsData = response.data;
-        total = response.data.length;
-        lastPage = 1;
-      } else if (Array.isArray(response)) {
-        // Response itself is array
-        productsData = response;
-        total = response.length;
-        lastPage = 1;
-      } else {
-        // Different response format
-        productsData = [];
-        total = 0;
-        lastPage = 1;
+      // HANDLE API RESPONSE - Extract products data from different response structures
+      const productsData = response.data.data || [];  // Get products array
+      setProducts(productsData);      // Set current displayed products
+      setAllProducts(productsData);   // Store all products for search functionality
+      
+      // PAGINATION DATA - Extract pagination information from response
+      setLastPage(response.data.last_page || 1);        // Total pages available
+      setCurrentPage(response.data.current_page || 1);  // Current page number
+      setTotalProducts(response.data.total || 0);       // Total products count
+      
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setProducts([]);        // Reset products on error
+      setTotalProducts(0);    // Reset total count
+      if (showNotification) {
+        showNotification('Failed to load products', 'error');  // Show error notification
       }
-
-      console.log('Extracted products:', productsData);
-      
-      setProducts(productsData);
-      setLastPage(lastPage);
-      setTotalProducts(total);
-      
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      // Show informative message instead of alert
-      setProducts([]);
-      setTotalProducts(0);
     } finally {
-      setLoading(false);
+      setLoading(false);  // End loading state regardless of outcome
     }
   };
 
-  const handleSearch = async () => {
+  // SEARCH HANDLER - Filter products based on search query
+  const handleSearch = () => {
     if (!searchQuery.trim()) {
-      fetchProducts();
+      fetchProducts(1);  // Reset to all products if search is empty
       return;
     }
 
-    try {
-      setLoading(true);
-      const response = await productsAPI.search(searchQuery);
+    setLoading(true);  // Start search loading state
+
+    const searchTerm = searchQuery.toLowerCase().trim();  // Normalize search term
+    
+    // FILTER PRODUCTS - Search across multiple product fields
+    const filteredProducts = allProducts.filter(product => {
+      const matchesName = product.name.toLowerCase().includes(searchTerm);        // Product name match
+      const matchesCategory = product.category && 
+        product.category.name.toLowerCase().includes(searchTerm);                // Category name match
+      const matchesDescription = product.description && 
+        product.description.toLowerCase().includes(searchTerm);                  // Description match
       
-      let searchResults = [];
-      if (response.data && response.data.data) {
-        searchResults = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        searchResults = response.data;
-      } else {
-        searchResults = [];
-      }
-      
-      setProducts(searchResults);
-      setTotalProducts(searchResults.length);
-      setLastPage(1);
-      setCurrentPage(1);
-      
-    } catch (error) {
-      console.error('Error searching products:', error);
-      setProducts([]);
-    } finally {
-      setLoading(false);
+      return matchesName || matchesCategory || matchesDescription;  // Return if any field matches
+    });
+
+    // UPDATE STATE - Set filtered results
+    setProducts(filteredProducts);
+    setTotalProducts(filteredProducts.length);  // Update total count for filtered results
+    setLastPage(1);      // Reset pagination for search results
+    setCurrentPage(1);   // Reset to first page
+    
+    setLoading(false);   // End search loading state
+  };
+
+  // CLEAR SEARCH HANDLER - Reset search and show all products
+  const handleClearSearch = () => {
+    setSearchQuery('');    // Clear search input
+    fetchProducts(1);      // Fetch first page of all products
+  };
+
+  // KEY PRESS HANDLER - Trigger search on Enter key
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();  // Execute search when Enter is pressed
     }
   };
 
+  // PAGE CHANGE HANDLER - Navigate between pagination pages
   const handlePageChange = (page) => {
-    setCurrentPage(page);
+    setCurrentPage(page);  // Update current page state
   };
 
+  // PAGINATION RENDERER - Generate pagination controls
   const renderPagination = () => {
-    if (lastPage <= 1) return null;
+    if (lastPage <= 1) return null;  // Hide pagination if only one page
 
-    const pages = [];
-    const maxVisiblePages = 5;
+    const pages = [];  // Array to hold pagination buttons
+    const maxVisiblePages = 5;  // Maximum pages to show in pagination
 
+    // CALCULATE VISIBLE PAGE RANGE - Center current page in visible range
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(lastPage, startPage + maxVisiblePages - 1);
 
+    // ADJUST START PAGE - Ensure we show maximum visible pages
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
+    // FIRST PAGE BUTTON - Show if not on first page
     if (startPage > 1) {
       pages.push(
-        <button key="first" className="btn" onClick={() => handlePageChange(1)}>
-          ⏮️ First
+        <button key="first" className="pagination-btn" onClick={() => handlePageChange(1)}>
+          First
         </button>
       );
     }
 
+    // PREVIOUS BUTTON - Show if not on first page
     if (currentPage > 1) {
       pages.push(
-        <button key="prev" className="btn" onClick={() => handlePageChange(currentPage - 1)}>
-          ◀️ Previous
+        <button key="prev" className="pagination-btn" onClick={() => handlePageChange(currentPage - 1)}>
+          Previous
         </button>
       );
     }
 
+    // PAGE NUMBER BUTTONS - Generate buttons for visible page range
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
         <button
           key={i}
-          className={`btn ${currentPage === i ? 'btn-primary' : ''}`}
+          className={`pagination-btn ${currentPage === i ? 'pagination-active' : ''}`}
           onClick={() => handlePageChange(i)}
-          style={{ minWidth: '40px' }}
         >
           {i}
         </button>
       );
     }
 
+    // NEXT BUTTON - Show if not on last page
     if (currentPage < lastPage) {
       pages.push(
-        <button key="next" className="btn" onClick={() => handlePageChange(currentPage + 1)}>
-          Next ▶️
+        <button key="next" className="pagination-btn" onClick={() => handlePageChange(currentPage + 1)}>
+          Next
         </button>
       );
     }
 
+    // LAST PAGE BUTTON - Show if not on last page
     if (endPage < lastPage) {
       pages.push(
-        <button key="last" className="btn" onClick={() => handlePageChange(lastPage)}>
-          Last ⏭️
+        <button key="last" className="pagination-btn" onClick={() => handlePageChange(lastPage)}>
+          Last
         </button>
       );
     }
 
     return (
-      <div className="card">
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          gap: '0.5rem',
-          flexWrap: 'wrap'
-        }}>
-          {pages}
+      <div className="pagination-container">
+        <div className="pagination">
+          {pages}  {/* Render pagination buttons */}
         </div>
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '1rem', 
-          color: '#666',
-          padding: '0.5rem'
-        }}>
+        <div className="pagination-info">
           Showing {products.length} of {totalProducts} products | Page {currentPage} of {lastPage}
         </div>
       </div>
     );
   };
 
-  if (loading) {
+  // UNAUTHENTICATED USER VIEW - Show login prompt
+  if (!user) {
     return (
-      <div className="loading">
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div 
-            style={{
-              width: '50px',
-              height: '50px',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              marginBottom: '1rem'
-            }}
-          ></div>
-          <p style={{ color: '#666', margin: 0 }}>Loading products...</p>
-        </div>
+      <div className="hero-container">
+        <h1>Welcome to E-Store</h1>  {/* Welcome title */}
+        <p>Discover amazing products after logging in!</p>  {/* Welcome message */}
+        <button className="btn-primary" onClick={() => onViewChange('login')}>
+          Login to Shop  {/* Login call to action */}
+        </button>
       </div>
     );
   }
 
+  // LOADING STATE - Display during data fetch
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading products...</p>  {/* Loading message */}
+      </div>
+    );
+  }
+
+  // MAIN COMPONENT RENDER - Product catalog interface
   return (
-    <div>
-      <div className="card mb-2">
-        <h2>
-          {user ? '🛍️ Products List' : '🛍️ Our Products'}
-          {!user && (
-            <span style={{ 
-              fontSize: '1rem', 
-              color: '#666', 
-              marginLeft: '1rem',
-              fontWeight: 'normal'
-            }}>
-              - Login to enable purchasing
-            </span>
-          )}
-        </h2>
-        
-        <div style={{ 
-          display: 'flex', 
-          gap: '1rem', 
-          alignItems: 'center', 
-          flexWrap: 'wrap',
-          marginTop: '1rem'
-        }}>
-          <div style={{ flex: 1, minWidth: '250px' }}>
-            <input
-              type="text"
-              placeholder="Search for products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ 
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
-          </div>
-          
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary" onClick={handleSearch}>
-              🔍 Search
-            </button>
-            <button className="btn" onClick={() => {
-              setSearchQuery('');
-              setCurrentPage(1);
-              fetchProducts();
-            }}>
-              🔄 Show All
-            </button>
+    <div className="products-list-container">
+      
+      {/* HEADER SECTION - Page title and search functionality */}
+      <div className="products-list-header">
+        <div className="header-content">
+          <div className="header-title">
+            <h1>All Products</h1>  {/* Main page title */}
+            <p className="header-subtitle">Browse our collection of {totalProducts} products</p>  {/* Product count */}
           </div>
         </div>
 
-        {searchQuery && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '0.5rem', 
-            backgroundColor: '#f8f9fa',
-            borderRadius: '4px',
-            textAlign: 'center'
-          }}>
-            <strong>Search Results:</strong> {totalProducts} products found for "{searchQuery}"
+        {/* SEARCH SECTION - Product search and filtering */}
+        <div className="search-section">
+          <div className="search-container">
+            {/* SEARCH INPUT - Text input for product search */}
+            <input
+              type="text"
+              placeholder="Search by product name, category, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}  // Update search query
+              onKeyPress={handleKeyPress}  // Handle Enter key press
+              className="search-input"
+            />
+            {/* SEARCH ACTIONS - Buttons for search operations */}
+            <div className="search-actions">
+              <button className="management-btn btn-primary" onClick={handleSearch}>
+                Search  {/* Execute search */}
+              </button>
+              <button className="management-btn btn-secondary" onClick={handleClearSearch}>
+                Show All  {/* Clear search and show all products */}
+              </button>
+            </div>
           </div>
-        )}
 
-        {/* Message for visitors */}
-        {!user && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '1rem',
-            backgroundColor: '#e3f2fd',
-            border: '1px solid #bbdefb',
-            borderRadius: '4px',
-            textAlign: 'center'
-          }}>
-            <p style={{ margin: 0, color: '#1565c0', fontWeight: 'bold' }}>
-              🔒 To purchase and add products to cart, please{' '}
-              <a 
-                href="#login" 
-                onClick={(e) => { e.preventDefault(); onViewChange('login'); }}
-                style={{ color: '#d32f2f', textDecoration: 'underline' }}
-              >
-                login
-              </a>{' '}
-              or{' '}
-              <a 
-                href="#register" 
-                onClick={(e) => { e.preventDefault(); onViewChange('register'); }}
-                style={{ color: '#d32f2f', textDecoration: 'underline' }}
-              >
-                create new account
-              </a>
-            </p>
+          {/* SEARCH TIPS - Help text for search functionality */}
+          <div className="search-tips">
+            <strong>Search by:</strong>  {/* Search tips label */}
+            <span>Product Name</span>    {/* Searchable field */}
+            <span>Category</span>        {/* Searchable field */}
+            <span>Description</span>     {/* Searchable field */}
           </div>
+
+          {/* SEARCH RESULTS INFO - Display search results information */}
+          {searchQuery && (
+            <div className="search-results-info">
+              Search Results: <strong>{products.length}</strong> product{products.length !== 1 ? 's' : ''} found for "{searchQuery}"  {/* Results count */}
+              {products.length === 0 && (
+                <div className="no-results-message">
+                  No products found. Try different search terms.  {/* No results message */}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* PRODUCTS COUNT - Display current products count */}
+      <div className="products-count">
+        Showing {products.length} of {totalProducts} products  {/* Products count */}
+        {searchQuery && (
+          <span className="search-term"> for "{searchQuery}"</span>  
         )}
       </div>
 
+      {/* PRODUCTS GRID - Main products display area */}
       {products.length > 0 ? (
         <>
-          <div className="grid grid-3">
+          <div className="products-grid">
+            {/* MAP THROUGH PRODUCTS - Render each product item */}
             {products.map(product => (
-              <ProductItem key={product.id} product={product} user={user} />
+              <ProductItem 
+                key={product.id}  // Unique product key
+                product={product}
+                user={user}
+                showNotification={showNotification}  // Notification handler
+              />
             ))}
           </div>
           
+          {/* PAGINATION CONTROLS - Show if multiple pages exist */}
           {renderPagination()}
         </>
       ) : (
-        <div className="card text-center" style={{ padding: '3rem' }}>
-          <h3 style={{ color: '#666', marginBottom: '1rem' }}>No products found</h3>
-          <p>No products available in the database</p>
-          <div style={{ marginTop: '1rem' }}>
-            <p style={{ color: '#666', fontSize: '0.9rem' }}>
-              Please check:
-            </p>
-            <ul style={{ textAlign: 'left', display: 'inline-block', color: '#666' }}>
-              <li>Laravel server is running on port 8000</li>
-              <li>There are products in the database</li>
-              <li>The API endpoint is working correctly</li>
-            </ul>
-          </div>
+        /* EMPTY STATE - No products available message */
+        <div className="empty-state">
+          <h3>
+            {searchQuery ? 'No products found' : 'No products available'}  {/* Context-specific title */}
+          </h3>
+          <p>
+            {searchQuery 
+              ? `No results found for "${searchQuery}". Try different search terms.`  // Search no results
+              : 'There are no products available in the database yet.'  // General no products
+            }
+          </p>
           <button 
-            className="btn btn-primary"
-            onClick={fetchProducts}
-            style={{ marginTop: '1rem' }}
+            className="btn-primary"
+            onClick={() => fetchProducts(1)}  // Reload products
           >
-            🔄 Reload Products
+            Reload Products  {/* Reload action */}
           </button>
         </div>
       )}
-      
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 };
 
+// DEFAULT EXPORT - Make component available for import
 export default ProductsList;

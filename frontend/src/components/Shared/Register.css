@@ -1,0 +1,330 @@
+/* ===== VARIABLES - Your Color Palette ===== */
+:root {
+  --color-primary: #ABE7B2;           /* Primary green from your palette */
+  --color-primary-light: #CBF3BB;     /* Light green from your palette */
+  --color-primary-dark: #93BFC7;      /* Blue accent from your palette */
+  --color-background: #ECF4E8;        /* Background from your palette */
+  --color-text: #2D3748;              /* Professional dark text */
+  --color-white: #FFFFFF;             /* Pure white */
+  --color-error: #E53E3E;             /* Error red */
+  --color-success: #22C55E;           /* Success green */
+  --color-warning: #F59E0B;           /* Warning orange */
+  --color-border: #E2E8F0;            /* Border color */
+}
+
+/* ===== REGISTER CONTAINER ===== */
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 85vh;
+  padding: 2rem 1.5rem;
+  background: var(--color-background);  /* Your light green background */
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ===== REGISTER CARD ===== */
+.register-card {
+  background: var(--color-white);                    /* White card background */
+  border-radius: 16px;
+  padding: 2.5rem;
+  border: 2px solid var(--color-primary);            /* Primary green border */
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);        /* Subtle shadow */
+  width: 100%;
+  max-width: 500px;
+  transition: all 0.3s ease;
+}
+
+.register-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);      /* Enhanced shadow on hover */
+  transform: translateY(-5px);                       /* Lift effect */
+}
+
+/* HEADER TYPOGRAPHY */
+.register-title {
+  margin-bottom: 0.5rem;
+  color: var(--color-text);                          /* Dark text color */
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.register-subtitle {
+  color: var(--color-text);                          /* Dark text color */
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+/* ===== ERROR MESSAGE ===== */
+.register-error {
+  color: var(--color-error);                         /* Error red color */
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #FEF2F2;                               /* Light red background */
+  border-radius: 12px;
+  font-size: 0.95rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #FECACA;                         /* Red border */
+}
+
+/* ===== FORM STYLES ===== */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-label {
+  font-weight: 600;
+  color: var(--color-text);                          /* Dark text color */
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.required {
+  color: var(--color-error);                         /* Red for required indicator */
+}
+
+.form-input,
+.form-textarea {
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--color-border);             /* Light border */
+  border-radius: 12px;
+  font-size: 1rem;
+  width: 100%;
+  background: var(--color-background);               /* Your light green background */
+  transition: all 0.3s ease;
+  color: var(--color-text);                          /* Dark text color */
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);                /* Primary green border on focus */
+  background: var(--color-white);                    /* White background on focus */
+  box-shadow: 0 0 0 4px rgba(171, 231, 178, 0.2);   /* Green glow */
+  transform: translateY(-2px);                       /* Lift effect */
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--color-text);                          /* Dark placeholder */
+  opacity: 0.5;
+}
+
+.form-input:disabled,
+.form-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== PASSWORD INPUT CONTAINER ===== */
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input {
+  padding-right: 4rem;  /* Space for toggle button */
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);                  /* Blue accent color */
+  transition: color 0.3s ease;
+  border-radius: 4px;
+}
+
+.password-toggle:hover:not(:disabled) {
+  color: var(--color-primary);                       /* Primary green on hover */
+  background: rgba(171, 231, 178, 0.1);             /* Light green background */
+}
+
+.password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== PASSWORD STRENGTH INDICATOR ===== */
+.password-strength {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.strength-bar {
+  margin-top: 0.25rem;
+  height: 6px;
+  background: var(--color-border);                   /* Light background */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.strength-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* Strength color variations */
+.strength-weak .strength-fill {
+  background: var(--color-error);                    /* Red for weak */
+}
+.strength-medium .strength-fill {
+  background: var(--color-warning);                  /* Orange for medium */
+}
+.strength-strong .strength-fill {
+  background: var(--color-success);                  /* Green for strong */
+}
+
+/* ===== PASSWORD MATCH INDICATOR ===== */
+.password-match {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.password-match.matching {
+  color: var(--color-success);                       /* Green for matching */
+}
+.password-match.not-matching {
+  color: var(--color-error);                         /* Red for not matching */
+}
+
+/* ===== BUTTON STYLES ===== */
+.register-button {
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  font-family: inherit;
+  background: var(--color-primary);                  /* Primary green background */
+  color: var(--color-white);                         /* White text */
+  border: 2px solid var(--color-primary);            /* Green border */
+  width: 100%;
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.register-button:hover:not(:disabled) {
+  background: var(--color-primary-light);            /* Light green on hover */
+  border-color: var(--color-primary-light);          /* Light green border */
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(171, 231, 178, 0.3);  /* Green shadow */
+}
+
+.register-button:active:not(:disabled) {
+  transform: translateY(0);                          /* Reset on click */
+}
+
+.register-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  animation: pulse 1.5s ease-in-out infinite;        /* Loading animation */
+}
+
+/* ===== LOGIN SECTION ===== */
+.login-section {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid var(--color-primary-light);  /* Light green border */
+}
+
+.login-text {
+  color: var(--color-text);                          /* Dark text color */
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.login-link {
+  font-weight: 600;
+  margin-left: 0.5rem;
+  color: var(--color-primary-dark);                  /* Blue accent color */
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.login-link:hover {
+  color: var(--color-primary);                       /* Primary green on hover */
+  border-bottom-color: var(--color-primary);         /* Underline effect */
+  transform: translateY(-1px);
+}
+
+/* ===== LOADING ANIMATION ===== */
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 0.6; 
+  }
+  50% { 
+    opacity: 0.8; 
+  }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* TABLET STYLES - 768px and below */
+@media (max-width: 768px) {
+  .register-card { 
+    padding: 2rem; 
+  }
+  .register-title { 
+    font-size: 1.75rem; 
+  }
+  .register-subtitle { 
+    font-size: 1rem; 
+  }
+}
+
+/* MOBILE STYLES - 480px and below */
+@media (max-width: 480px) {
+  .register-container {
+    padding: 1rem;
+  }
+  
+  .register-card { 
+    padding: 1.5rem; 
+  }
+  
+  .register-title { 
+    font-size: 1.5rem; 
+  }
+  
+  .register-button { 
+    font-size: 0.9rem; 
+    padding: 0.875rem 1.25rem;
+  }
+  
+  .form-input,
+  .form-textarea {
+    padding: 0.875rem 1rem;
+  }
+}

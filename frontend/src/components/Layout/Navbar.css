@@ -1,0 +1,219 @@
+/* ===== CSS VARIABLES - Green Color Palette Definition ===== */
+:root {
+  /* PRIMARY COLORS - Green theme from your palette */
+  --color-primary: #ABE7B2;           /* Main green color for primary elements */
+  --color-primary-light: #CBF3BB;     /* Light green for hover states */
+  --color-primary-dark: #93BFC7;      /* Blue-green accent color */
+  --color-background: #ECF4E8;        /* Page background light green */
+  --color-text: #2D3748;              /* Professional dark gray for text */
+  --color-white: #FFFFFF;             /* Pure white for backgrounds */
+  
+  /* TYPOGRAPHY SETTINGS - Font family definition */
+  --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  
+  /* DESIGN TOKENS - Consistent spacing and effects */
+  --border-radius: 8px;               /* Standard border radius */
+  --transition: 0.3s ease;            /* Smooth transition timing */
+}
+
+/* ===== MAIN NAVBAR CONTAINER ===== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-white);                    /* Clean white background */
+  padding: 0 1.5rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 70px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);        /* Subtle elevation shadow */
+  border-bottom: 3px solid var(--color-primary);     /* Primary green accent border */
+  font-family: var(--font-family);                   /* Consistent font family */
+}
+
+/* ===== NAVBAR HEADER SECTION ===== */
+.nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* ===== BRAND/LOGO STYLING ===== */
+.nav-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);                          /* Dark text for contrast */
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+  text-decoration: none;
+  display: block;
+}
+
+/* BRAND HOVER EFFECT - Interactive feedback */
+.nav-brand:hover {
+  background: var(--color-primary-light);            /* Light green background */
+  color: var(--color-text);                          /* Maintain text color */
+  transform: translateY(-2px);                       /* Lift effect on hover */
+}
+
+/* ===== NAVIGATION LINKS CONTAINER ===== */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  
+}
+
+/* ===== NAVIGATION LINK BUTTONS ===== */
+.nav-link {
+  background: var(--color-white);                    /* White button background */
+  border: 2px solid var(--color-primary);            /* Primary green border */
+  color: var(--color-text);                          /* Dark text color */
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all var(--transition);
+  text-decoration: none;
+
+}
+
+/* LINK HOVER EFFECT - Interactive state */
+.nav-link:hover {
+  background: var(--color-primary);                  /* Solid green background */
+  color: var(--color-white);                         /* White text for contrast */
+  transform: translateY(-2px);                       /* Lift animation */
+  box-shadow: 0 4px 12px rgba(171, 231, 178, 0.3);  /* Green glow shadow */
+}
+
+/* ===== LOGOUT BUTTON - Distinct Styling ===== */
+.nav-logout {
+  background: var(--color-white);                    /* White background */
+  border: 2px solid #E53E3E;                         /* Red border for warning */
+  color: #E53E3E;                                    /* Red text color */
+  font-weight: 600;
+}
+
+/* LOGOUT HOVER EFFECT - Warning state */
+.nav-logout:hover {
+  background: #E53E3E;                               /* Solid red background */
+  color: var(--color-white);                         /* White text */
+  border-color: #E53E3E;                             /* Maintain red border */
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);    /* Red glow shadow */
+}
+
+/* ===== MOBILE BURGER MENU ===== */
+.menu-toggle {
+  display: none;                                     /* Hidden on desktop */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: var(--color-white);                    /* White button background */
+  border: 2px solid var(--color-primary);            /* Green border */
+  cursor: pointer;
+  padding: 0.5rem;
+  width: 45px;
+  height: 45px;
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+}
+
+/* BURGER MENU LINES - Visual hamburger icon */
+.burger-line {
+  width: 22px;
+  height: 3px;
+  background: var(--color-text);                     /* Dark color for visibility */
+  margin: 3px 0;
+  transition: all var(--transition);
+  border-radius: 2px;
+}
+
+/* BURGER BUTTON HOVER EFFECT */
+.menu-toggle:hover {
+  background: var(--color-primary-light);            /* Light green background */
+  border-color: var(--color-primary);                /* Maintain border color */
+}
+
+/* ===== BURGER MENU ANIMATION - Transform to X ===== */
+.menu-toggle.menu-open .burger-line:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);      /* First line rotation */
+  background: var(--color-text);                     /* Dark color */
+}
+
+.menu-toggle.menu-open .burger-line:nth-child(2) {
+  opacity: 0;                                        /* Middle line disappears */
+}
+
+.menu-toggle.menu-open .burger-line:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);    /* Third line rotation */
+  background: var(--color-text);                     /* Dark color */
+}
+
+/* ===== RESPONSIVE DESIGN - Mobile Breakpoint ===== */
+@media (max-width: 768px) {
+  /* SHOW BURGER MENU ON MOBILE */
+  .menu-toggle {
+    display: flex;
+  }
+
+  /* MOBILE NAVIGATION MENU - Full screen overlay */
+  .nav-links {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-white);                  /* White background */
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 2rem 1rem;
+    gap: 0.5rem;
+    transform: translateX(-100%);                    /* Hidden off-screen */
+    transition: transform var(--transition);
+    overflow-y: auto;
+    border-top: 2px solid var(--color-primary);      /* Green top border */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);      /* Depth shadow */
+  }
+
+  /* MOBILE MENU OPEN STATE - Slide into view */
+  .nav-links.nav-links-open {
+    transform: translateX(0);                        /* Slide to visible position */
+  }
+
+  /* MOBILE NAVIGATION LINKS - Full width buttons */
+  .nav-link {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 0.5rem;
+    background: var(--color-background);             /* Light green background */
+    border-color: var(--color-primary-light);        /* Light green border */
+  }
+
+  /* MOBILE LINK HOVER EFFECT */
+  .nav-link:hover {
+    background: var(--color-primary);                /* Solid green background */
+    color: var(--color-white);                       /* White text */
+  }
+}
+
+/* ===== BODY STYLING - Layout Adjustments ===== */
+body {
+  padding-top: 70px;                                 /* Prevent content under navbar */
+  background-color: var(--color-background);         /* Light green page background */
+}
+
+/* ===== MENU OPEN STATE - Scroll Lock ===== */
+body.menu-open {
+  overflow: hidden;                                  /* Prevent background scrolling */
+}

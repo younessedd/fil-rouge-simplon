@@ -1,30 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { categoriesAPI } from '../../services/api';
+import './CategoriesManagement.css';
 
-const CategoriesManagement = () => {
-  const [allCategories, setAllCategories] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+// CATEGORIES MANAGEMENT COMPONENT - Admin interface for category management
+const CategoriesManagement = ({ showNotification }) => {
+  // STATE MANAGEMENT - Application data and UI state
+  const [allCategories, setAllCategories] = useState([]);           // Complete categories dataset
+  const [categories, setCategories] = useState([]);                 // Currently displayed categories
+  const [loading, setLoading] = useState(true);                     // Initial data loading state
+  const [showEditModal, setShowEditModal] = useState(false);        // Add/Edit modal visibility
+  const [showDeleteModal, setShowDeleteModal] = useState(false);    // Delete confirmation modal visibility
+  const [selectedCategory, setSelectedCategory] = useState(null);   // Category selected for editing/deletion
+  const [formLoading, setFormLoading] = useState(false);            // Form submission loading state
+  const [searchQuery, setSearchQuery] = useState('');               // Search filter input
+  const [isMobile, setIsMobile] = useState(false);                  // Responsive layout detection
   
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [totalCategories, setTotalCategories] = useState(0);
-  const [perPage] = useState(9);
+  // PAGINATION STATE - Data pagination controls
+  const [currentPage, setCurrentPage] = useState(1);                // Current page number
+  const [lastPage, setLastPage] = useState(1);                      // Total number of pages
+  const [totalCategories, setTotalCategories] = useState(0);        // Total categories count
+  const [perPage] = useState(9);                                    // Items per page (constant)
 
+  // FORM STATE - Category form data
   const [formData, setFormData] = useState({
-    name: '',
-    slug: ''
+    name: '',   // Category name input
+    slug: ''    // Category slug input
   });
 
+  // RESPONSIVE LAYOUT EFFECT - Detect screen size changes
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // INITIAL DATA LOADING - Fetch categories on component mount
   useEffect(() => {
     fetchAllCategories();
   }, []);
 
+  // FETCH ALL CATEGORIES - Retrieve complete categories dataset from API
   const fetchAllCategories = async () => {
     try {
       setLoading(true);
@@ -41,39 +61,62 @@ const CategoriesManagement = () => {
       
     } catch (error) {
       console.error('Error fetching categories:', error);
-      alert('Failed to load categories');
+      
+      if (error.message.includes('AUTH_REQUIRED')) {
+        showNotification('Please log in to access categories', 'error');
+      } else {
+        showNotification('Failed to load categories', 'error');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // UPDATE DISPLAYED CATEGORIES - Paginate and filter categories for display
   const updateDisplayedCategories = (categoriesData, page) => {
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage;
     setCategories(categoriesData.slice(startIndex, endIndex));
   };
 
+  // SEARCH HANDLER - Filter categories based on search criteria
   const handleSearch = () => {
     if (!searchQuery.trim()) {
       updateDisplayedCategories(allCategories, 1);
       setCurrentPage(1);
+      setTotalCategories(allCategories.length);
+      setLastPage(Math.ceil(allCategories.length / perPage));
+      showNotification('Showing all categories', 'info');
       return;
     }
 
-    // Search by Category ID (if query is number) or by name/slug
     const filteredCategories = allCategories.filter(category =>
-      category.id.toString().includes(searchQuery) || // Search by Category ID
+      category.id.toString().includes(searchQuery) ||
       category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      category.slug.toLowerCase().includes(searchQuery.toLowerCase())
+      (category.slug && category.slug.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     setTotalCategories(filteredCategories.length);
-    const calculatedLastPage = Math.ceil(filteredCategories.length / perPage);
+    const calculatedLastPage = Math.ceil(filteredCategories.length / perPage) || 1;
     setLastPage(calculatedLastPage);
     updateDisplayedCategories(filteredCategories, 1);
     setCurrentPage(1);
+
+    if (filteredCategories.length > 0) {
+      showNotification(`Found ${filteredCategories.length} categor${filteredCategories.length !== 1 ? 'ies' : 'y'} for "${searchQuery}"`, 'success');
+    } else {
+      showNotification(`No categories found for "${searchQuery}"`, 'info');
+    }
   };
 
+  // KEYBOARD NAVIGATION - Handle Enter key for search
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // FORM INPUT HANDLER - Update form data on input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -82,29 +125,45 @@ const CategoriesManagement = () => {
     }));
   };
 
+  // FORM SUBMISSION HANDLER - Create or update category
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormLoading(true);
     
     try {
       if (selectedCategory && selectedCategory.id) {
+        // Update existing category
         await categoriesAPI.update(selectedCategory.id, formData);
-        alert('Category updated successfully');
+        showNotification(`Category "${formData.name}" updated successfully!`, 'success');
       } else {
+        // Create new category
         await categoriesAPI.create(formData);
-        alert('Category added successfully');
+        showNotification(`Category "${formData.name}" added successfully!`, 'success');
       }
 
       closeModals();
       fetchAllCategories();
+      
     } catch (error) {
       console.error('Error saving category:', error);
-      alert('Failed to save category');
+      
+      let errorMessage = 'Failed to save category';
+      
+      if (error.message.includes('AUTH_REQUIRED')) {
+        errorMessage = 'Please log in to save categories';
+      } else if (error.message.includes('No query results')) {
+        errorMessage = 'Category not found. It may have been deleted.';
+      } else {
+        errorMessage = error.message || 'Unknown error occurred';
+      }
+      
+      showNotification(`${errorMessage}`, 'error');
     } finally {
       setFormLoading(false);
     }
   };
 
+  // MODAL CONTROLS - Close all modals and reset form
   const closeModals = () => {
     setShowEditModal(false);
     setShowDeleteModal(false);
@@ -115,44 +174,96 @@ const CategoriesManagement = () => {
     });
   };
 
+  // EDIT HANDLER - Open edit modal with category data
   const handleEdit = (category) => {
     setSelectedCategory(category);
     setFormData({
       name: category.name,
-      slug: category.slug
+      slug: category.slug || ''
     });
     setShowEditModal(true);
   };
 
+  // DELETE MODAL HANDLER - Open confirmation dialog for category deletion
   const openDeleteModal = (category) => {
     setSelectedCategory(category);
     setShowDeleteModal(true);
   };
 
+  // CATEGORY DELETION HANDLER - Remove category from system
   const handleDelete = async () => {
     if (!selectedCategory) return;
 
+    const categoryIdToDelete = selectedCategory.id;
+    const categoryName = selectedCategory.name;
+    
     try {
-      await categoriesAPI.delete(selectedCategory.id);
-      alert('Category deleted successfully');
+      setFormLoading(true);
+      
+      await categoriesAPI.delete(categoryIdToDelete);
+      
+      // Update local state after successful deletion
+      const updatedCategories = allCategories.filter(category => category.id !== categoryIdToDelete);
+      setAllCategories(updatedCategories);
+      setTotalCategories(updatedCategories.length);
+      
+      const calculatedLastPage = Math.ceil(updatedCategories.length / perPage) || 1;
+      setLastPage(calculatedLastPage);
+      
+      // Update displayed categories
+      const newCurrentPage = currentPage > calculatedLastPage ? Math.max(1, calculatedLastPage) : currentPage;
+      setCurrentPage(newCurrentPage);
+      updateDisplayedCategories(updatedCategories, newCurrentPage);
+      
+      showNotification(`Category "${categoryName}" deleted successfully!`, 'success');
       closeModals();
-      fetchAllCategories();
+      
     } catch (error) {
-      console.error('Error deleting category:', error);
-      alert('Failed to delete category');
+      console.error('Delete error:', error);
+      
+      let errorMessage = 'Failed to delete category';
+      
+      if (error.message.includes('AUTH_REQUIRED')) {
+        errorMessage = 'Please log in to delete categories';
+      } else if (error.message.includes('NOT_FOUND') || error.message.includes('No query results')) {
+        errorMessage = 'Category not found or already deleted';
+        // Remove from local state anyway since it doesn't exist on server
+        const updatedCategories = allCategories.filter(category => category.id !== categoryIdToDelete);
+        setAllCategories(updatedCategories);
+        setTotalCategories(updatedCategories.length);
+        
+        const calculatedLastPage = Math.ceil(updatedCategories.length / perPage) || 1;
+        setLastPage(calculatedLastPage);
+        
+        const newCurrentPage = currentPage > calculatedLastPage ? Math.max(1, calculatedLastPage) : currentPage;
+        setCurrentPage(newCurrentPage);
+        updateDisplayedCategories(updatedCategories, newCurrentPage);
+        
+        showNotification('Category was already deleted from server', 'info');
+        closeModals();
+        return;
+      } else {
+        errorMessage = error.message || 'Unknown error occurred';
+      }
+      
+      showNotification(`${errorMessage}`, 'error');
+    } finally {
+      setFormLoading(false);
     }
   };
 
+  // PAGINATION HANDLER - Navigate between category pages
   const handlePageChange = (page) => {
     setCurrentPage(page);
     updateDisplayedCategories(allCategories, page);
   };
 
+  // PAGINATION RENDERER - Generate pagination controls
   const renderPagination = () => {
     if (lastPage <= 1) return null;
 
     const pages = [];
-    const maxVisiblePages = 5;
+    const maxVisiblePages = isMobile ? 3 : 5;
 
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(lastPage, startPage + maxVisiblePages - 1);
@@ -163,16 +274,16 @@ const CategoriesManagement = () => {
 
     if (startPage > 1) {
       pages.push(
-        <button key="first" className="btn" onClick={() => handlePageChange(1)}>
-          ⏮️ First
+        <button key="first" className="pagination-btn" onClick={() => handlePageChange(1)}>
+          {isMobile ? 'First' : 'First'}
         </button>
       );
     }
 
     if (currentPage > 1) {
       pages.push(
-        <button key="prev" className="btn" onClick={() => handlePageChange(currentPage - 1)}>
-          ◀️ Previous
+        <button key="prev" className="pagination-btn" onClick={() => handlePageChange(currentPage - 1)}>
+          {isMobile ? 'Prev' : 'Previous'}
         </button>
       );
     }
@@ -181,9 +292,8 @@ const CategoriesManagement = () => {
       pages.push(
         <button
           key={i}
-          className={`btn ${currentPage === i ? 'btn-primary' : ''}`}
+          className={`pagination-btn ${currentPage === i ? 'pagination-active' : ''}`}
           onClick={() => handlePageChange(i)}
-          style={{ minWidth: '40px' }}
         >
           {i}
         </button>
@@ -192,203 +302,258 @@ const CategoriesManagement = () => {
 
     if (currentPage < lastPage) {
       pages.push(
-        <button key="next" className="btn" onClick={() => handlePageChange(currentPage + 1)}>
-          Next ▶️
+        <button key="next" className="pagination-btn" onClick={() => handlePageChange(currentPage + 1)}>
+          {isMobile ? 'Next' : 'Next'}
         </button>
       );
     }
 
     if (endPage < lastPage) {
       pages.push(
-        <button key="last" className="btn" onClick={() => handlePageChange(lastPage)}>
-          Last ⏭️
+        <button key="last" className="pagination-btn" onClick={() => handlePageChange(lastPage)}>
+          {isMobile ? 'Last' : 'Last'}
         </button>
       );
     }
 
     return (
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="pagination-container">
+        <div className="pagination">
           {pages}
         </div>
-        <div style={{ textAlign: 'center', marginTop: '1rem', color: '#666' }}>
+        <div className="pagination-info">
           Showing {categories.length} of {totalCategories} categories | Page {currentPage} of {lastPage}
         </div>
       </div>
     );
   };
 
+  // ACTION BUTTONS COMPONENT - Edit and Delete buttons for each category
+  const ActionButtons = ({ category }) => (
+    <div className="action-buttons">
+      <button 
+        className="management-btn btn-edit"
+        onClick={() => handleEdit(category)}
+      >
+        Edit
+      </button>
+      <button 
+        className="management-btn btn-delete" 
+        onClick={() => openDeleteModal(category)}
+      >
+        Delete
+      </button>
+    </div>
+  );
+
+  // CATEGORY ROW RENDERER - Display category information based on screen size
+  const renderCategoryRow = (category) => {
+    // MOBILE LAYOUT - Card-based design for small screens
+    if (isMobile) {
+      return (
+        <div key={category.id} className="data-card-mobile">
+          <div className="category-card-header">
+            <div className="category-id-mobile">
+              #{category.id}
+            </div>
+          </div>
+          
+          <div className="category-card-body">
+            <div className="category-info-grid">
+              <div className="category-info-item">
+                <span className="info-label">Category Name</span>
+                <span className="info-value">{category.name}</span>
+              </div>
+              
+              <div className="category-info-item">
+                <span className="info-label">Slug</span>
+                <div className="category-slug-mobile">
+                  {category.slug || 'N/A'}
+                </div>
+              </div>
+              
+              <div className="category-info-item">
+                <span className="info-label">Created Date</span>
+                <div className="category-date-mobile">
+                  {category.created_at ? new Date(category.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : 'N/A'}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="category-card-actions">
+            <ActionButtons category={category} />
+          </div>
+        </div>
+      );
+    }
+
+    // DESKTOP LAYOUT - Table-based design for large screens
+    return (
+      <tr key={category.id} className="category-row">
+        <td className="category-id-cell">
+          <strong>#{category.id}</strong>
+        </td>
+        <td className="category-name-cell">
+          {category.name}
+        </td>
+        <td>
+          <span className="category-slug-cell">
+            {category.slug || 'N/A'}
+          </span>
+        </td>
+        <td className="category-date-cell">
+          {category.created_at ? new Date(category.created_at).toLocaleDateString('en-US') : 'N/A'}
+        </td>
+        <td className="actions-cell">
+          <ActionButtons category={category} />
+        </td>
+      </tr>
+    );
+  };
+
+  // LOADING STATE - Display during initial data fetch
   if (loading) {
     return (
-      <div className="loading">
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div 
-            style={{
-              width: '50px',
-              height: '50px',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              marginBottom: '1rem'
-            }}
-          ></div>
-          <p style={{ color: '#666', margin: 0 }}>Loading categories...</p>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading categories...</p>
       </div>
     );
   }
 
+  // MAIN COMPONENT RENDER - Category management interface
   return (
-    <div>
-      <div className="card mb-2">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <h2>📁 Categories Management</h2>
-          <button 
-            className="btn btn-primary"
-            onClick={() => {
-              setSelectedCategory(null);
-              setFormData({
-                name: '',
-                slug: ''
-              });
-              setShowEditModal(true);
-            }}
-          >
-            + Add Category
-          </button>
+    <div className="management-container">
+      {/* FLOATING ACTION BUTTON - Quick access to add new category */}
+      <button 
+        className="fixed-add-button"
+        onClick={() => {
+          setSelectedCategory(null);
+          setFormData({
+            name: '',
+            slug: ''
+          });
+          setShowEditModal(true);
+        }}
+        title="Add New Category"
+      >
+        +
+      </button>
+
+      {/* HEADER SECTION - Title and description */}
+      <div className="management-card">
+        <div className="management-header">
+          <div className="header-title">
+            <h1>Categories Management</h1>
+            <p className="header-subtitle">Manage your product categories efficiently</p>
+          </div>
         </div>
 
-        {/* Search Bar - Updated for ID search */}
-        <div style={{ marginTop: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* SEARCH SECTION - Category filtering interface */}
+        <div className="search-container">
+          <div className="search-box">
             <input
               type="text"
               placeholder="Search by category ID, name, or slug..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ 
-                flex: 1,
-                minWidth: '250px',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyPress={handleKeyPress}
+              className="search-input"
             />
-            <button className="btn btn-primary" onClick={handleSearch}>
-              🔍 Search
-            </button>
-            <button className="btn" onClick={() => {
-              setSearchQuery('');
-              fetchAllCategories();
-            }}>
-              🔄 Show All
-            </button>
+            <div className="search-actions">
+              <button className="management-btn btn-primary btn-search" onClick={handleSearch}>
+                Search
+              </button>
+              <button className="management-btn btn-secondary" onClick={() => {
+                setSearchQuery('');
+                fetchAllCategories();
+              }}>
+                Clear
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
-            💡 Search tip: You can search by Category ID, name, or slug
+          <div className="search-tips">
+            Search tips: Enter category ID, name, or slug to find specific categories
           </div>
         </div>
       </div>
 
-      {/* Edit/Add Category Modal */}
+      {/* EDIT/ADD CATEGORY MODAL - Form for creating/updating categories */}
       {showEditModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>{selectedCategory ? `✏️ Edit Category #${selectedCategory.id}` : '➕ Add New Category'}</h3>
-              <button className="modal-close" onClick={closeModals}>✕</button>
+              <h3>{selectedCategory ? `Edit Category #${selectedCategory.id}` : 'Add New Category'}</h3>
+              <button className="modal-close" onClick={closeModals}>Close</button>
             </div>
             
-            <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+            <form onSubmit={handleSubmit} className="management-form">
               {selectedCategory && (
-                <div className="form-group">
-                  <label>Category ID:</label>
+                <div className="form-group full-width">
+                  <label>Category ID</label>
                   <input
                     type="text"
                     value={selectedCategory.id}
                     disabled
-                    style={{ 
-                      width: '100%',
-                      backgroundColor: '#f8f9fa',
-                      color: '#666'
-                    }}
+                    className="form-input"
                   />
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-grid">
                 <div className="form-group">
-                  <label>Category Name:</label>
+                  <label>Category Name *</label>
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    style={{ width: '100%' }}
+                    placeholder="Enter category name"
+                    className="form-input"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Slug:</label>
+                  <label>Slug *</label>
                   <input
                     type="text"
                     name="slug"
                     value={formData.slug}
                     onChange={handleInputChange}
                     required
-                    style={{ width: '100%' }}
+                    placeholder="Enter category slug"
+                    className="form-input"
                   />
                 </div>
               </div>
 
-              <div style={{ 
-                display: 'flex', 
-                gap: '1rem', 
-                justifyContent: 'flex-end',
-                marginTop: '1.5rem',
-                paddingTop: '1rem',
-                borderTop: '1px solid #eee'
-              }}>
+              <div className="form-actions">
                 <button 
                   type="button" 
-                  className="btn" 
+                  className="management-btn btn-secondary" 
                   onClick={closeModals}
                   disabled={formLoading}
-                  style={{ minWidth: '100px' }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn btn-primary"
+                  className="management-btn btn-primary"
                   disabled={formLoading}
-                  style={{ minWidth: '120px' }}
                 >
                   {formLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid transparent',
-                        borderTop: '2px solid white',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite'
-                      }}></div>
+                    <span className="loading-content">
+                      <div className="loading-spinner-small"></div>
                       Saving...
                     </span>
                   ) : (
-                    selectedCategory ? '💾 Update Category' : '➕ Add Category'
+                    selectedCategory ? 'Update Category' : 'Add Category'
                   )}
                 </button>
               </div>
@@ -397,35 +562,46 @@ const CategoriesManagement = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* DELETE CONFIRMATION MODAL - Category deletion safety check */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>🗑️ Delete Category</h3>
-              <button className="modal-close" onClick={closeModals}>✕</button>
+              <h3>Delete Category</h3>
+              <button className="modal-close" onClick={closeModals}>Close</button>
             </div>
             
-            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem' }}>
+            <div className="delete-modal-content">
+              <div className="delete-icon">Warning</div>
+              <h4>Confirm Deletion</h4>
+              <p>
                 Are you sure you want to delete category <strong>"{selectedCategory?.name}"</strong> (ID: {selectedCategory?.id})?
               </p>
-              <p style={{ color: '#e74c3c', marginBottom: '1.5rem' }}>
-                This action cannot be undone!
-              </p>
+              <div className="delete-warning">
+                This action cannot be undone and all category data will be permanently lost!
+              </div>
               
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <div className="delete-actions">
                 <button 
-                  className="btn" 
+                  className="management-btn btn-secondary" 
                   onClick={closeModals}
+                  disabled={formLoading}
                 >
                   Cancel
                 </button>
                 <button 
-                  className="btn btn-danger" 
+                  className="management-btn btn-danger" 
                   onClick={handleDelete}
+                  disabled={formLoading}
                 >
-                  Yes, Delete
+                  {formLoading ? (
+                    <span className="loading-content">
+                      <div className="loading-spinner-small"></div>
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Confirm Delete'
+                  )}
                 </button>
               </div>
             </div>
@@ -433,123 +609,65 @@ const CategoriesManagement = () => {
         </div>
       )}
 
-      <div className="card">
-        <h3>Categories List ({totalCategories})</h3>
+      {/* CATEGORIES LIST SECTION - Main categories display area */}
+      <div className="management-card">
+        <div className="section-header">
+          <h3>Categories List</h3>
+          <div className="products-count">
+            {totalCategories} categor{totalCategories !== 1 ? 'ies' : 'y'} total
+          </div>
+        </div>
         
         {categories.length === 0 ? (
-          <div className="text-center" style={{ padding: '2rem' }}>
-            <p>No categories found</p>
-            {searchQuery && (
-              <p style={{ color: '#666', marginTop: '0.5rem' }}>
-                No results for "{searchQuery}"
-              </p>
+          <div className="empty-state">
+            <div className="empty-icon">No Categories</div>
+            <h4>No Categories Found</h4>
+            <p>
+              {searchQuery 
+                ? `No results found for "${searchQuery}"`
+                : 'There are no categories in your database yet.'
+              }
+            </p>
+            {!searchQuery && (
+              <button 
+                className="management-btn btn-primary"
+                onClick={() => setShowEditModal(true)}
+              >
+                Add Your First Category
+              </button>
             )}
           </div>
         ) : (
           <>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Slug</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map(category => (
-                  <tr key={category.id}>
-                    <td><strong>#{category.id}</strong></td>
-                    <td>{category.name}</td>
-                    <td>{category.slug}</td>
-                    <td>{new Date(category.created_at).toLocaleDateString('en-US')}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button 
-                          className="btn"
-                          onClick={() => handleEdit(category)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button 
-                          className="btn btn-danger"
-                          onClick={() => openDeleteModal(category)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                        >
-                          🗑️ Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {isMobile ? (
+              // MOBILE LAYOUT - Card-based display
+              <div className="data-grid-mobile">
+                {categories.map(category => renderCategoryRow(category))}
+              </div>
+            ) : (
+              // DESKTOP LAYOUT - Table-based display
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Slug</th>
+                      <th>Created Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categories.map(category => renderCategoryRow(category))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             
             {renderPagination()}
           </>
         )}
       </div>
-
-      <style>
-        {`
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 1rem;
-          }
-
-          .modal-content {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-          }
-
-          .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            border-bottom: 1px solid #eee;
-          }
-
-          .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #666;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .modal-close:hover {
-            color: #000;
-          }
-
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 };

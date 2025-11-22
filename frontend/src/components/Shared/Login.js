@@ -1,106 +1,139 @@
+// IMPORT SECTION - React, API, and styles
 import React, { useState } from 'react';
-import { authAPI } from '../../services/api';
+import { authAPI } from '../../services/api';  // Authentication API calls
+import './Login.css';  // Import component-specific styles
 
+// LOGIN COMPONENT - User authentication form
 const Login = ({ onLogin, onSwitchToRegister }) => {
+  // STATE MANAGEMENT - Form data and UI states
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: '',      // User email input
+    password: ''    // User password input
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);      // Loading state during API call
+  const [error, setError] = useState('');             // Error message display
+  const [showPassword, setShowPassword] = useState(false);  // Password visibility toggle
 
-  // Handle input changes
+  // INPUT CHANGE HANDLER - Update form data on user input
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value  // Dynamic property update
     });
+    setError('');  // Clear errors when user starts typing
   };
 
-  // Handle form submission
+  // PASSWORD VISIBILITY TOGGLE - Show/hide password text
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  // FORM SUBMISSION HANDLER - Process login request
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault();  // Prevent default form submission
     setLoading(true);
     setError('');
 
     try {
+      // API CALL - Send login credentials to server
       const response = await authAPI.login(formData);
+      
+      // SUCCESS HANDLER - Pass user data to parent component
       onLogin(response.data.user, response.data.token);
+      
     } catch (err) {
+      // ERROR HANDLER - Display appropriate error message
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
+      // CLEANUP - Reset loading state regardless of outcome
       setLoading(false);
     }
   };
 
+  // COMPONENT RENDER - Login form structure
   return (
-    <div className="card" style={{ maxWidth: '400px', margin: '2rem auto' }}>
-      <h2 className="text-center">Login to Your Account</h2>
-      
-      {/* Error message display */}
-      {error && (
-        <div style={{ 
-          color: 'red', 
-          marginBottom: '1rem',
-          padding: '0.75rem',
-          backgroundColor: '#ffeaea',
-          border: '1px solid #ffcccc',
-          borderRadius: '4px'
-        }}>
-          {error}
-        </div>
-      )}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Email Address:</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            placeholder="Enter your email"
-          />
-        </div>
+    <div className="login-container">
+      <div className="login-card">
         
-        <div className="form-group">
-          <label>Password:</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            placeholder="Enter your password"
-          />
-        </div>
+        {/* HEADER SECTION - Welcome message */}
+        <h2 className="login-title">Welcome Back</h2>
+        <p className="login-subtitle">Login to your account</p>
         
-        <button 
-          type="submit" 
-          className="btn btn-primary" 
-          style={{ width: '100%' }}
-          disabled={loading}
-        >
-          {loading ? 'Signing In...' : 'Login'}
-        </button>
-      </form>
-      
-      <div className="text-center mt-2">
-        <span>Don't have an account? </span>
-        <a 
-          href="#register" 
-          onClick={(e) => { 
-            e.preventDefault(); 
-            onSwitchToRegister(); 
-          }}
-          style={{ color: '#3498db', textDecoration: 'none' }}
-        >
-          Create New Account
-        </a>
+        {/* ERROR DISPLAY - Show validation/API errors */}
+        {error && <div className="login-error">{error}</div>}
+        
+        {/* LOGIN FORM - Email and password inputs */}
+        <form onSubmit={handleSubmit} className="login-form">
+          
+          {/* EMAIL INPUT GROUP */}
+          <div className="form-group">
+            <label className="form-label">Email Address</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter your email"
+              className="form-input"
+              disabled={loading}  // Disable during loading
+            />
+          </div>
+          
+          {/* PASSWORD INPUT GROUP - With visibility toggle */}
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div className="password-input-container">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter your password"
+                className="form-input password-input"
+                disabled={loading}  // Disable during loading
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={togglePasswordVisibility}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={loading}  // Disable during loading
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+          
+          {/* SUBMIT BUTTON - Login action */}
+          <button 
+            type="submit" 
+            className="login-button"
+            disabled={loading}
+          >
+            {loading ? 'Signing In...' : 'Login'}
+          </button>
+        </form>
+        
+        {/* REGISTRATION LINK - Switch to register form */}
+        <div className="register-section">
+          <span className="register-text">Don't have an account?</span>
+          <a 
+            href="#register" 
+            onClick={(e) => { 
+              e.preventDefault(); 
+              onSwitchToRegister(); 
+            }}
+            className="register-link"
+          >
+            Create New Account
+          </a>
+        </div>
       </div>
     </div>
   );
 };
 
+// EXPORT COMPONENT - Default export
 export default Login;

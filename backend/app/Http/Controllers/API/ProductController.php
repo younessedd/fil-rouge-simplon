@@ -1,5 +1,8 @@
 <?php
 
+// ========================
+// 🗂️ NAMESPACE AND IMPORTS
+// ========================
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
@@ -9,97 +12,139 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
+// ========================
+// 📦 PRODUCT CONTROLLER CLASS
+// ========================
 class ProductController extends Controller
 {
-    // عرض كل المنتجات مع Pagination
+    // ========================
+    // 📋 GET ALL PRODUCTS (PAGINATED)
+    // ========================
     public function index()
     {
+        // Get products with category relationship, paginated (12 per page)
         $products = Product::with('category')->paginate(12);
+        
+        // Transform each product using formatProductResponse method
         $products->getCollection()->transform(fn($p) => $this->formatProductResponse($p));
+        
         return response()->json($products, 200);
     }
 
-    // إنشاء منتج
+    // ========================
+    // ➕ CREATE NEW PRODUCT
+    // ========================
     public function store(ProductRequest $request)
     {
+        // Check if current user is admin
         $user = $request->user();
-        if ($user->role !== 'admin') return response()->json(['message'=>'Forbidden'],403);
+        if ($user->role !== 'admin') return response()->json(['message' => 'Forbidden'], 403);
 
+        // Get validated data from ProductRequest
         $data = $request->validated();
 
-        // رفع الصورة
+        // Handle image upload
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products','public');
+            $data['image'] = $request->file('image')->store('products', 'public');
         }
 
-        // توليد slug إذا لم يُرسل
+        // Generate slug if not provided
         if (empty($data['slug'])) {
-            $data['slug'] = Str::slug($data['name']).'-'.time();
+            $data['slug'] = Str::slug($data['name']) . '-' . time();
         }
 
+        // Create new product
         $product = Product::create($data);
-        return response()->json($this->formatProductResponse($product),201);
+        
+        // Return formatted product response
+        return response()->json($this->formatProductResponse($product), 201);
     }
 
-    // عرض منتج واحد
+    // ========================
+    // 👀 GET SINGLE PRODUCT
+    // ========================
     public function show(Product $product)
     {
-        return response()->json($this->formatProductResponse($product),200);
+        // Return formatted single product
+        return response()->json($this->formatProductResponse($product), 200);
     }
 
-    // تحديث منتج
+    // ========================
+    // ✏️ UPDATE EXISTING PRODUCT
+    // ========================
     public function update(ProductRequest $request, Product $product)
     {
+        // Check if current user is admin
         $user = $request->user();
-        if ($user->role !== 'admin') return response()->json(['message'=>'Forbidden'],403);
+        if ($user->role !== 'admin') return response()->json(['message' => 'Forbidden'], 403);
 
         $data = $request->validated();
 
-        // تحديث الصورة (إذا أرسل ملف جديد)
+        // Handle image update (if new file uploaded)
         if ($request->hasFile('image')) {
+            // Delete old image if exists
             if ($product->image && Storage::disk('public')->exists($product->image)) {
                 Storage::disk('public')->delete($product->image);
             }
-            $data['image'] = $request->file('image')->store('products','public');
+            // Store new image
+            $data['image'] = $request->file('image')->store('products', 'public');
         }
 
-        // توليد slug إذا لم يُرسل
+        // Generate slug if not provided
         if (empty($data['slug'])) {
-            $data['slug'] = Str::slug($data['name']).'-'.time();
+            $data['slug'] = Str::slug($data['name']) . '-' . time();
         }
 
+        // Update product with new data
         $product->update($data);
-        return response()->json($this->formatProductResponse($product),200);
+        
+        // Return formatted updated product
+        return response()->json($this->formatProductResponse($product), 200);
     }
 
-    // حذف منتج
+    // ========================
+    // 🗑️ DELETE PRODUCT
+    // ========================
     public function destroy(Product $product)
     {
+        // Check if current user is admin
         $user = auth()->user();
-        if ($user->role !== 'admin') return response()->json(['message'=>'Forbidden'],403);
+        if ($user->role !== 'admin') return response()->json(['message' => 'Forbidden'], 403);
 
+        // Delete product image if exists
         if ($product->image && Storage::disk('public')->exists($product->image)) {
             Storage::disk('public')->delete($product->image);
         }
 
+        // Delete product from database
         $product->delete();
-        return response()->json(null,204);
+        
+        return response()->json(null, 204);
     }
 
-    // البحث
+    // ========================
+    // 🔍 SEARCH PRODUCTS
+    // ========================
     public function search(Request $request)
     {
+        // Get search query from request
         $query = $request->query('q');
-        $products = Product::where('name','LIKE',"%{$query}%")
-            ->orWhere('description','LIKE',"%{$query}%")
+        
+        // Search in product name and description
+        $products = Product::where('name', 'LIKE', "%{$query}%")
+            ->orWhere('description', 'LIKE', "%{$query}%")
             ->with('category')
             ->paginate(12);
 
+        // Transform each product using formatProductResponse method
         $products->getCollection()->transform(fn($p) => $this->formatProductResponse($p));
-        return response()->json($products,200);
+        
+        return response()->json($products, 200);
     }
 
-    // صياغة رد المنتج
+    // ========================
+    // 🎨 FORMAT PRODUCT RESPONSE
+    // ========================
     private function formatProductResponse($product)
     {
         return [
@@ -118,10 +163,18 @@ class ProductController extends Controller
         ];
     }
 
+    // ========================
+    // 🌐 GENERATE IMAGE URL
+    // ========================
     private function generateImageUrl($imagePath)
     {
+        // Return placeholder if no image
         if (!$imagePath) return 'https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image';
+        
+        // Extract filename from path
         $filename = basename($imagePath);
-        return config('app.url').'/api/images/products/'.$filename;
+        
+        // Generate full image URL using app configuration
+        return config('app.url') . '/api/images/products/' . $filename;
     }
 }

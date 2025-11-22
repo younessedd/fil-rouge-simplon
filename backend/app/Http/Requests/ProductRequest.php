@@ -1,23 +1,54 @@
 <?php
 
+// ========================
+// 🗂️ NAMESPACE AND IMPORTS
+// ========================
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+// ========================
+// 📦 PRODUCT REQUEST CLASS
+// ========================
 class ProductRequest extends FormRequest
 {
-    public function authorize(){ return true; }
+    // ========================
+    // ✅ AUTHORIZATION CHECK
+    // ========================
+    public function authorize()
+    { 
+        return true; // Allow all authenticated users (authorization handled in controller)
+    }
 
-    public function rules(){
+    // ========================
+    // 📋 VALIDATION RULES
+    // ========================
+    public function rules()
+    {
+        // Get product ID from route for unique slug validation
         $id = $this->route('product')?->id;
+        
         return [
-            'name'=>'required|string|max:255',
-            'slug'=>"nullable|string|unique:products,slug,$id",
-            'description'=>'nullable|string',
-            'price'=>'required|numeric',
-            'stock'=>'nullable|integer',
-            'category_id'=>'nullable|exists:categories,id',
-            'image'=>'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            // Product name - required field
+            'name' => 'required|string|max:255',
+            
+            // Product slug - must be unique (excluding current product)
+            'slug' => "nullable|string|unique:products,slug,$id",
+            
+            // Product description - optional
+            'description' => 'nullable|string',
+            
+            // Product price - required numeric value
+            'price' => 'required|numeric',
+            
+            // Stock quantity - optional integer
+            'stock' => 'nullable|integer',
+            
+            // Category relationship - must exist in categories table
+            'category_id' => 'nullable|exists:categories,id',
+            
+            // Product image - optional image file with specific requirements
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048'
         ];
     }
 }

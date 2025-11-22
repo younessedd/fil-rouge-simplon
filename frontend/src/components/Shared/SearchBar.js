@@ -1,85 +1,124 @@
 import React, { useState } from 'react';
+import './SearchBar.css'; // Import CSS file
 
+// SEARCH BAR COMPONENT - Reusable search input with suggestions
 const SearchBar = ({ 
-  onSearch, 
-  placeholder = "Search for products...", 
-  loading = false,
-  className = "" 
+  onSearch,                    // Callback function when search is submitted
+  placeholder = "Search for products...", // Input placeholder text
+  loading = false,             // Loading state for search operation
+  className = "",              // Additional CSS classes
+  size = "medium",             // Size variant (small, medium, large)
+  showIcon = true,             // Whether to show search icon
+  suggestions = [],            // Array of search suggestions
+  onSuggestionSelect           // Callback when suggestion is selected
 }) => {
-  const [query, setQuery] = useState('');
+  // STATE MANAGEMENT - Search input and UI state
+  const [query, setQuery] = useState('');              // Current search query
+  const [showSuggestions, setShowSuggestions] = useState(false); // Suggestions visibility
 
-  // Handle form submission
+  // SEARCH SUBMISSION HANDLER - Process search form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     if (query.trim()) {
       onSearch(query.trim());
+      setShowSuggestions(false);
     }
   };
 
-  // Clear search query
+  // SEARCH CLEAR HANDLER - Reset search query and results
   const handleClear = () => {
     setQuery('');
     onSearch('');
+    setShowSuggestions(false);
   };
 
+  // INPUT CHANGE HANDLER - Update query and show suggestions
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+    setShowSuggestions(value.length > 0);
+  };
+
+  // SUGGESTION SELECTION HANDLER - Apply selected suggestion
+  const handleSuggestionClick = (suggestion) => {
+    setQuery(suggestion);
+    onSearch(suggestion);
+    setShowSuggestions(false);
+    if (onSuggestionSelect) {
+      onSuggestionSelect(suggestion);
+    }
+  };
+
+  // KEYBOARD NAVIGATION HANDLER - Accessibility support
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  // MAIN COMPONENT RENDER - Search bar interface
   return (
-    <div className={`search-bar ${className}`} style={{ width: '100%' }}>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
+    <div className={`search-bar search-bar-${size} ${className}`}>
+      <form onSubmit={handleSubmit} className="search-form">
+        <div className="search-input-container">
+          {/* SEARCH ICON - Visual indicator for search input */}
+          {showIcon && (
+            <span className="search-icon" aria-hidden="true">
+              Search
+            </span>
+          )}
+          
+          {/* SEARCH INPUT - Main text input field */}
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '1rem',
-              outline: 'none'
-            }}
-            onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
+            className="search-input"
+            aria-label="Search"
+            role="searchbox"
           />
           
-          {/* Clear button (X) - appears when there's text */}
+          {/* CLEAR BUTTON - Reset search query */}
           {query && (
             <button
               type="button"
               onClick={handleClear}
-              style={{
-                position: 'absolute',
-                left: '0.5rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.2rem',
-                cursor: 'pointer',
-                color: '#999'
-              }}
+              className="clear-button"
+              aria-label="Clear search"
             >
-              ✕
+              Clear
             </button>
+          )}
+          
+          {/* SEARCH SUGGESTIONS - Dropdown with search suggestions */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="search-suggestions" role="listbox">
+              {suggestions.map((suggestion, index) => (
+                <div
+                  key={index}
+                  className="suggestion-item"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSuggestionClick(suggestion)}
+                  role="option"
+                  tabIndex={0}
+                >
+                  {suggestion}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Search button */}
+        {/* SEARCH BUTTON - Submit search form */}
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: loading || !query.trim() ? 'not-allowed' : 'pointer',
-            opacity: loading || !query.trim() ? 0.6 : 1,
-            fontSize: '1rem'
-          }}
+          className={`search-button ${loading ? 'search-button-loading' : ''}`}
+          aria-label={loading ? "Searching..." : "Search"}
         >
-          {loading ? '...' : 'Search'}
+          {loading ? '' : 'Search'}
         </button>
       </form>
     </div>

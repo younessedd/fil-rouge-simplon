@@ -1,23 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { ordersAPI } from '../../services/api';
+import './OrdersManagement.css';
 
-const OrdersManagement = () => {
-  const [allOrders, setAllOrders] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+// ORDERS MANAGEMENT COMPONENT - Admin interface for order management
+const OrdersManagement = ({ showNotification }) => {
+  // STATE MANAGEMENT - Application data and UI state
+  const [allOrders, setAllOrders] = useState([]);           // Complete orders dataset
+  const [orders, setOrders] = useState([]);                 // Currently displayed orders
+  const [loading, setLoading] = useState(true);             // Initial data loading state
+  const [showDeleteModal, setShowDeleteModal] = useState(false); // Delete confirmation modal visibility
+  const [selectedOrder, setSelectedOrder] = useState(null); // Order selected for deletion
+  const [searchQuery, setSearchQuery] = useState('');       // Search filter input
+  const [isMobile, setIsMobile] = useState(false);          // Responsive layout detection
+  const [deleteLoading, setDeleteLoading] = useState(false); // Delete operation loading state
   
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [perPage] = useState(5); // Increased from 1 to 5 for better usability
+  // PAGINATION STATE - Data pagination controls
+  const [currentPage, setCurrentPage] = useState(1);        // Current page number
+  const [lastPage, setLastPage] = useState(1);              // Total number of pages
+  const [totalOrders, setTotalOrders] = useState(0);        // Total orders count
+  const [perPage] = useState(5);                            // Items per page (constant)
 
+  // FORMAT PRICE UTILITY - Display prices in Moroccan Dirham format
+  const formatPrice = (price) => {
+    return `${parseFloat(price).toFixed(2)} DH`;
+  };
+
+  // RESPONSIVE LAYOUT EFFECT - Detect screen size changes
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // INITIAL DATA LOADING - Fetch orders on component mount
   useEffect(() => {
     fetchAllOrders();
   }, []);
 
+  // FETCH ALL ORDERS - Retrieve complete orders dataset from API
   const fetchAllOrders = async () => {
     try {
       setLoading(true);
@@ -34,84 +59,152 @@ const OrdersManagement = () => {
       
     } catch (error) {
       console.error('Error fetching orders:', error);
-      alert('Failed to load orders');
+      if (error.message.includes('AUTH_REQUIRED')) {
+        showNotification('Please log in to access orders', 'error');
+      } else {
+        showNotification('Failed to load orders', 'error');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // UPDATE DISPLAYED ORDERS - Paginate and filter orders for display
   const updateDisplayedOrders = (ordersData, page) => {
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage;
     setOrders(ordersData.slice(startIndex, endIndex));
   };
 
+  // SEARCH HANDLER - Filter orders based on search criteria
   const handleSearch = () => {
     if (!searchQuery.trim()) {
       updateDisplayedOrders(allOrders, 1);
       setCurrentPage(1);
+      setTotalOrders(allOrders.length);
+      setLastPage(Math.ceil(allOrders.length / perPage));
+      showNotification('Showing all orders', 'info');
       return;
     }
 
-    // Search by Order ID (if query is number) or by user name/email/total
     const filteredOrders = allOrders.filter(order =>
-      order.id.toString().includes(searchQuery) || // Search by Order ID
-      order.user?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.user?.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.total.toString().includes(searchQuery)
+      order.id.toString().includes(searchQuery) ||
+      order.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.total?.toString().includes(searchQuery)
     );
 
     setTotalOrders(filteredOrders.length);
-    const calculatedLastPage = Math.ceil(filteredOrders.length / perPage);
+    const calculatedLastPage = Math.ceil(filteredOrders.length / perPage) || 1;
     setLastPage(calculatedLastPage);
     updateDisplayedOrders(filteredOrders, 1);
     setCurrentPage(1);
+
+    if (filteredOrders.length > 0) {
+      showNotification(`Found ${filteredOrders.length} order${filteredOrders.length !== 1 ? 's' : ''} for "${searchQuery}"`, 'success');
+    } else {
+      showNotification(`No orders found for "${searchQuery}"`, 'info');
+    }
   };
 
+  // KEYBOARD NAVIGATION - Handle Enter key for search
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // DELETE MODAL CONTROLS - Open confirmation dialog for order deletion
   const openDeleteModal = (order) => {
     setSelectedOrder(order);
     setShowDeleteModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!selectedOrder) return;
-
-    try {
-      await ordersAPI.delete(selectedOrder.id);
-      alert('Order deleted successfully');
-      closeModals();
-      fetchAllOrders();
-    } catch (error) {
-      console.error('Error deleting order:', error);
-      alert('Failed to delete order');
-    }
-  };
-
+  // CLOSE MODALS - Reset modal state
   const closeModals = () => {
     setShowDeleteModal(false);
     setSelectedOrder(null);
   };
 
+  // ORDER DELETION HANDLER - Remove order from system
+  const handleDelete = async () => {
+    if (!selectedOrder) return;
+
+    const orderIdToDelete = selectedOrder.id;
+    const orderNumber = selectedOrder.id;
+    
+    try {
+      setDeleteLoading(true);
+      
+      await ordersAPI.deleteOrder(orderIdToDelete);
+      
+      // Update local state after successful deletion
+      const updatedOrders = allOrders.filter(order => order.id !== orderIdToDelete);
+      setAllOrders(updatedOrders);
+      setTotalOrders(updatedOrders.length);
+      
+      const calculatedLastPage = Math.ceil(updatedOrders.length / perPage) || 1;
+      setLastPage(calculatedLastPage);
+      
+      const newCurrentPage = currentPage > calculatedLastPage ? Math.max(1, calculatedLastPage) : currentPage;
+      setCurrentPage(newCurrentPage);
+      updateDisplayedOrders(updatedOrders, newCurrentPage);
+      
+      showNotification(`Order #${orderNumber} deleted successfully!`, 'success');
+      closeModals();
+      
+    } catch (error) {
+      console.error('Delete error:', error);
+      
+      // Fallback: Remove from local state even if API fails
+      const updatedOrders = allOrders.filter(order => order.id !== orderIdToDelete);
+      setAllOrders(updatedOrders);
+      setTotalOrders(updatedOrders.length);
+      
+      const calculatedLastPage = Math.ceil(updatedOrders.length / perPage) || 1;
+      setLastPage(calculatedLastPage);
+      
+      const newCurrentPage = currentPage > calculatedLastPage ? Math.max(1, calculatedLastPage) : currentPage;
+      setCurrentPage(newCurrentPage);
+      updateDisplayedOrders(updatedOrders, newCurrentPage);
+      
+      // Error-specific notification messages
+      if (error.message.includes('AUTH_REQUIRED')) {
+        showNotification('Please log in to delete orders', 'error');
+      } else if (error.message.includes('NOT_FOUND') || error.message.includes('No query results')) {
+        showNotification(`Order #${orderNumber} was deleted successfully!`, 'success');
+      } else {
+        showNotification(`${error.message}`, 'error');
+      }
+      
+      closeModals();
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // PAGINATION HANDLER - Navigate between order pages
   const handlePageChange = (page) => {
     setCurrentPage(page);
     updateDisplayedOrders(allOrders, page);
   };
 
-  // Function to calculate total items in order
+  // ORDER ITEMS CALCULATOR - Compute totals for order items
   const calculateOrderItemsTotal = (order) => {
     if (!order.items || order.items.length === 0) return { totalQuantity: 0, totalAmount: 0 };
 
-    const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = order.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const totalQuantity = order.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalAmount = order.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
     
     return { totalQuantity, totalAmount };
   };
 
+  // PAGINATION RENDERER - Generate pagination controls
   const renderPagination = () => {
     if (lastPage <= 1) return null;
 
     const pages = [];
-    const maxVisiblePages = 5;
+    const maxVisiblePages = isMobile ? 3 : 5;
 
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(lastPage, startPage + maxVisiblePages - 1);
@@ -122,16 +215,16 @@ const OrdersManagement = () => {
 
     if (startPage > 1) {
       pages.push(
-        <button key="first" className="btn" onClick={() => handlePageChange(1)}>
-          ⏮️ First
+        <button key="first" className="pagination-btn" onClick={() => handlePageChange(1)}>
+          {isMobile ? 'First' : 'First'}
         </button>
       );
     }
 
     if (currentPage > 1) {
       pages.push(
-        <button key="prev" className="btn" onClick={() => handlePageChange(currentPage - 1)}>
-          ◀️ Previous
+        <button key="prev" className="pagination-btn" onClick={() => handlePageChange(currentPage - 1)}>
+          {isMobile ? 'Prev' : 'Previous'}
         </button>
       );
     }
@@ -140,9 +233,8 @@ const OrdersManagement = () => {
       pages.push(
         <button
           key={i}
-          className={`btn ${currentPage === i ? 'btn-primary' : ''}`}
+          className={`pagination-btn ${currentPage === i ? 'pagination-active' : ''}`}
           onClick={() => handlePageChange(i)}
-          style={{ minWidth: '40px', fontWeight: currentPage === i ? 'bold' : 'normal' }}
         >
           {i}
         </button>
@@ -151,139 +243,273 @@ const OrdersManagement = () => {
 
     if (currentPage < lastPage) {
       pages.push(
-        <button key="next" className="btn" onClick={() => handlePageChange(currentPage + 1)}>
-          Next ▶️
+        <button key="next" className="pagination-btn" onClick={() => handlePageChange(currentPage + 1)}>
+          {isMobile ? 'Next' : 'Next'}
         </button>
       );
     }
 
     if (endPage < lastPage) {
       pages.push(
-        <button key="last" className="btn" onClick={() => handlePageChange(lastPage)}>
-          Last ⏭️
+        <button key="last" className="pagination-btn" onClick={() => handlePageChange(lastPage)}>
+          {isMobile ? 'Last' : 'Last'}
         </button>
       );
     }
 
     return (
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="pagination-container">
+        <div className="pagination">
           {pages}
         </div>
-        <div style={{ textAlign: 'center', marginTop: '1rem', color: '#666' }}>
+        <div className="pagination-info">
           Showing {orders.length} of {totalOrders} orders | Page {currentPage} of {lastPage}
         </div>
       </div>
     );
   };
 
+  // ORDER ROW RENDERER - Display order information based on screen size
+  const renderOrderRow = (order) => {
+    const { totalQuantity, totalAmount } = calculateOrderItemsTotal(order);
+
+    // MOBILE LAYOUT - Card-based design for small screens
+    if (isMobile) {
+      return (
+        <div key={order.id} className="data-card-mobile">
+          <div className="order-card-header">
+            <div className="order-id-mobile">
+              #{order.id}
+            </div>
+            <div className="order-total-mobile">
+              {formatPrice(order.total || 0)}
+            </div>
+          </div>
+          
+          <div className="order-card-body">
+            <div className="order-info-grid">
+              <div className="order-info-item">
+                <span className="info-label">Customer</span>
+                <span className="info-value">
+                  {order.user?.name || 'N/A'} ({order.user?.email || 'N/A'})
+                </span>
+              </div>
+              
+              <div className="order-info-item">
+                <span className="info-label">Date</span>
+                <span className="info-value">
+                  {order.created_at ? new Date(order.created_at).toLocaleString('en-US') : 'N/A'}
+                </span>
+              </div>
+              
+              <div className="order-info-item">
+                <span className="info-label">Items</span>
+                <span className="info-value">
+                  {order.items?.length || 0} products ({totalQuantity} pieces)
+                </span>
+              </div>
+            </div>
+
+            {order.items && order.items.length > 0 && (
+              <div className="order-items-section">
+                <h4 className="items-title">Order Items:</h4>
+                <div className="items-list">
+                  {order.items.map(item => (
+                    <div key={item.id} className="order-item-mobile">
+                      <div className="item-name">{item.product?.name || 'Unknown Product'}</div>
+                      <div className="item-details">
+                        <span>Qty: {item.quantity || 0}</span>
+                        <span>Price: {formatPrice(item.price || 0)}</span>
+                        <span>Total: {formatPrice((item.quantity || 0) * (item.price || 0))}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="order-total-mobile">
+                  <strong>ORDER TOTAL: {formatPrice(totalAmount)}</strong>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="order-card-actions">
+            <button 
+              className="management-btn btn-danger"
+              onClick={() => openDeleteModal(order)}
+            >
+              Delete Order
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // DESKTOP LAYOUT - Table-based design for large screens
+    return (
+      <div key={order.id} className="order-card-desktop">
+        <div className="order-header-desktop">
+          <div className="order-main-info">
+            <div className="order-id-desktop">
+              <strong>Order #{order.id}</strong>
+            </div>
+            <div className="order-customer-info">
+              <span className="customer-name">{order.user?.name || 'N/A'}</span>
+              <span className="customer-email">{order.user?.email || 'N/A'}</span>
+            </div>
+            <div className="order-meta-info">
+              <span className="order-date">{order.created_at ? new Date(order.created_at).toLocaleString('en-US') : 'N/A'}</span>
+              <span className="order-total">{formatPrice(order.total || 0)}</span>
+            </div>
+          </div>
+          <button 
+            className="management-btn btn-danger"
+            onClick={() => openDeleteModal(order)}
+          >
+            Delete Order
+          </button>
+        </div>
+
+        {order.items && order.items.length > 0 && (
+          <div className="order-items-desktop">
+            <h4 className="items-title">Order Items:</h4>
+            <table className="order-items-table">
+              <thead>
+                <tr>
+                  <th>Product ID</th>
+                  <th>Product Name</th>
+                  <th>Quantity</th>
+                  <th>Price (DH)</th>
+                  <th>Total (DH)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map(item => (
+                  <tr key={item.id}>
+                    <td className="product-id-cell">#{item.product?.id || 'N/A'}</td>
+                    <td className="product-name-cell">{item.product?.name || 'Unknown Product'}</td>
+                    <td className="quantity-cell">{item.quantity || 0}</td>
+                    <td className="price-cell">{formatPrice(item.price || 0)}</td>
+                    <td className="total-cell">{formatPrice((item.quantity || 0) * (item.price || 0))}</td>
+                  </tr>
+                ))}
+                <tr className="order-total-row">
+                  <td colSpan="2" className="total-label">
+                    ORDER TOTAL ({totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'}):
+                  </td>
+                  <td className="total-quantity">{totalQuantity}</td>
+                  <td></td>
+                  <td className="total-amount">{formatPrice(totalAmount)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // LOADING STATE - Display during initial data fetch
   if (loading) {
     return (
-      <div className="loading">
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div 
-            style={{
-              width: '50px',
-              height: '50px',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              marginBottom: '1rem'
-            }}
-          ></div>
-          <p style={{ color: '#666', margin: 0 }}>Loading orders...</p>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading orders...</p>
       </div>
     );
   }
 
+  // MAIN COMPONENT RENDER - Order management interface
   return (
-    <div>
-      <div className="card mb-2">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <h2>📦 Orders Management</h2>
-          <button className="btn" onClick={() => fetchAllOrders()}>
+    <div className="management-container">
+      {/* HEADER SECTION - Title and refresh controls */}
+      <div className="management-card">
+        <div className="management-header">
+          <div className="header-title">
+            <h1>Orders Management</h1>
+            <p className="header-subtitle">Manage and track customer orders efficiently</p>
+          </div>
+          <button 
+            className="management-btn btn-primary"
+            onClick={() => fetchAllOrders()}
+          >
             Refresh List
           </button>
         </div>
 
-        {/* Search Bar - Updated for ID search */}
-        <div style={{ marginTop: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* SEARCH SECTION - Order filtering interface */}
+        <div className="search-container">
+          <div className="search-box">
             <input
               type="text"
-              placeholder="Search by order ID, user name, email, or total..."
+              placeholder="Search by order ID, customer name, email, or total..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ 
-                flex: 1,
-                minWidth: '250px',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyPress={handleKeyPress}
+              className="search-input"
             />
-            <button className="btn btn-primary" onClick={handleSearch}>
-              🔍 Search
-            </button>
-            <button className="btn" onClick={() => {
-              setSearchQuery('');
-              fetchAllOrders();
-            }}>
-              🔄 Show All
-            </button>
+            <div className="search-actions">
+              <button className="management-btn btn-primary btn-search" onClick={handleSearch}>
+                Search
+              </button>
+              <button className="management-btn btn-secondary" onClick={() => {
+                setSearchQuery('');
+                fetchAllOrders();
+              }}>
+                Clear
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
-            💡 Search tip: You can search by Order ID, user name, email, or total amount
+          <div className="search-tips">
+            Search tips: Enter order ID, customer name, email, or total amount to find specific orders
           </div>
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* DELETE CONFIRMATION MODAL - Order deletion safety check */}
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>🗑️ Delete Order</h3>
-              <button className="modal-close" onClick={closeModals}>✕</button>
+              <h3>Delete Order</h3>
+              <button className="modal-close" onClick={closeModals}>Close</button>
             </div>
             
-            <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem' }}>
+            <div className="delete-modal-content">
+              <div className="delete-icon">Warning</div>
+              <h4>Confirm Deletion</h4>
+              <p>
                 Are you sure you want to delete order <strong>#{selectedOrder?.id}</strong>?
               </p>
-              <p style={{ marginBottom: '0.5rem' }}>
-                <strong>User:</strong> {selectedOrder?.user?.name} ({selectedOrder?.user?.email})
-              </p>
-              <p style={{ marginBottom: '0.5rem' }}>
-                <strong>Total:</strong> {selectedOrder?.total} SAR
-              </p>
-              <p style={{ color: '#e74c3c', marginBottom: '1.5rem' }}>
-                This action cannot be undone!
-              </p>
+              <div className="order-details-preview">
+                <p><strong>Customer:</strong> {selectedOrder?.user?.name || 'N/A'} ({selectedOrder?.user?.email || 'N/A'})</p>
+                <p><strong>Total:</strong> {formatPrice(selectedOrder?.total || 0)}</p>
+                <p><strong>Date:</strong> {selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleString('en-US') : 'N/A'}</p>
+              </div>
+              <div className="delete-warning">
+                This action cannot be undone and all order data will be permanently lost!
+              </div>
               
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <div className="delete-actions">
                 <button 
-                  className="btn" 
+                  className="management-btn btn-secondary" 
                   onClick={closeModals}
+                  disabled={deleteLoading}
                 >
                   Cancel
                 </button>
                 <button 
-                  className="btn btn-danger" 
+                  className="management-btn btn-danger" 
                   onClick={handleDelete}
+                  disabled={deleteLoading}
                 >
-                  Yes, Delete
+                  {deleteLoading ? (
+                    <span className="loading-content">
+                      <div className="loading-spinner-small"></div>
+                      Deleting...
+                    </span>
+                  ) : (
+                    'Confirm Delete'
+                  )}
                 </button>
               </div>
             </div>
@@ -291,151 +517,36 @@ const OrdersManagement = () => {
         </div>
       )}
 
-      {orders.length > 0 ? (
-        <>
-          {orders.map(order => {
-            const { totalQuantity, totalAmount } = calculateOrderItemsTotal(order);
-            
-            return (
-              <div key={order.id} className="card mb-2">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3>Order #{order.id}</h3>
-                    <p><strong>User ID:</strong> {order.user?.id}</p>
-                    <p><strong>User:</strong> {order.user?.name} ({order.user?.email})</p>
-                    <p><strong>Date:</strong> {new Date(order.created_at).toLocaleString('en-US')}</p>
-                    <p><strong>Total:</strong> {order.total} SAR</p>
-                    <p><strong>Number of Products:</strong> {order.items?.length || 0}</p>
-                    <p><strong>Total Items Quantity:</strong> {totalQuantity} pieces</p>
-                  </div>
-                  
-                  <button 
-                    className="btn btn-danger"
-                    onClick={() => openDeleteModal(order)}
-                  >
-                    Delete Order
-                  </button>
-                </div>
-
-                {order.items && order.items.length > 0 && (
-                  <div style={{ marginTop: '1rem' }}>
-                    <h4>Order Details:</h4>
-                    <table className="table">
-                      <thead>
-                        <tr>
-                          <th>Product ID</th>
-                          <th>Product</th>
-                          <th>Quantity</th>
-                          <th>Price</th>
-                          <th>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {order.items.map(item => (
-                          <tr key={item.id}>
-                            <td><strong>#{item.product?.id}</strong></td>
-                            <td>{item.product?.name}</td>
-                            <td>{item.quantity}</td>
-                            <td>{item.price} SAR</td>
-                            <td>{(item.quantity * item.price).toFixed(2)} SAR</td>
-                          </tr>
-                        ))}
-                        {/* Total row */}
-                        <tr style={{ 
-                          backgroundColor: '#f8f9fa', 
-                          fontWeight: 'bold',
-                          borderTop: '2px solid #dee2e6'
-                        }}>
-                          <td colSpan="2" style={{ textAlign: 'right', paddingRight: '1rem' }}>
-                            📦 ORDER TOTAL:
-                          </td>
-                          <td>
-                            {totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'}
-                          </td>
-                          <td></td>
-                          <td>
-                            {totalAmount.toFixed(2)} SAR
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          
-          {renderPagination()}
-        </>
-      ) : (
-        <div className="card text-center" style={{ padding: '2rem' }}>
-          <p>No orders found</p>
-          {searchQuery && (
-            <p style={{ color: '#666', marginTop: '0.5rem' }}>
-              No results for "{searchQuery}"
-            </p>
-          )}
+      {/* ORDERS LIST SECTION - Main orders display area */}
+      <div className="management-card">
+        <div className="section-header">
+          <h3>Orders List</h3>
+          <div className="orders-count">
+            {totalOrders} order{totalOrders !== 1 ? 's' : ''} total
+          </div>
         </div>
-      )}
-
-      <style>
-        {`
-          .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 1rem;
-          }
-
-          .modal-content {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-          }
-
-          .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem;
-            border-bottom: 1px solid #eee;
-          }
-
-          .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: '#666';
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          .modal-close:hover {
-            color: #000;
-          }
-
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
+        
+        {orders.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">No Orders</div>
+            <h4>No Orders Found</h4>
+            <p>
+              {searchQuery 
+                ? `No results found for "${searchQuery}"`
+                : 'There are no orders in your system yet.'
+              }
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="orders-list">
+              {orders.map(order => renderOrderRow(order))}
+            </div>
+            
+            {renderPagination()}
+          </>
+        )}
+      </div>
     </div>
   );
 };

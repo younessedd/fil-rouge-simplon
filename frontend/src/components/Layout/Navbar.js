@@ -1,166 +1,166 @@
-import React from 'react';
+// REACT IMPORTS - Core React functionality and state management hooks
+import React, { useState, useEffect } from 'react';
+import './Navbar.css';  // Import component-specific styles
 
+// NAVBAR COMPONENT - Main navigation with user authentication handling
 const Navbar = ({ user, onLogout, onViewChange }) => {
-  // Handle navigation between different views
+  // STATE MANAGEMENT - Mobile menu visibility control
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // EFFECT HOOK - Control body scroll when mobile menu is open
+  useEffect(() => {
+    // Toggle scroll lock class on body element
+    document.body.classList.toggle('menu-open', isMenuOpen);
+    // Cleanup function to remove class when component unmounts
+    return () => document.body.classList.remove('menu-open');
+  }, [isMenuOpen]); // Dependency ensures effect runs when menu state changes
+
+  // NAVIGATION HANDLER - Unified navigation with mobile menu management
   const handleNavigation = (view) => {
-    console.log('Navigating to:', view); // Debug log
-    onViewChange(view);
+    onViewChange(view);      // Propagate view change to parent component
+    setIsMenuOpen(false);    // Close mobile menu after navigation
   };
 
+  // LOGOUT HANDLER - Enhanced logout with menu management
+  const handleLogout = () => {
+    onLogout();             // Execute parent component logout logic
+    setIsMenuOpen(false);   // Ensure mobile menu closes on logout
+  };
+
+  // COMPONENT RENDER - Navigation structure with conditional user menus
   return (
     <nav className="navbar">
-      {/* Brand/Logo section - click to go to home */}
-      <div 
-        className="nav-brand" 
-        onClick={() => handleNavigation(user ? (user.role === 'admin' ? 'admin' : 'home') : 'products')} 
-        style={{cursor: 'pointer'}}
-      >
-        🛒 E-Store
-      </div>
       
-      <div className="nav-links">
-        {/* Show different links based on user role */}
-        {user ? (
+      {/* NAVBAR HEADER SECTION - Contains brand and mobile toggle */}
+      <div className="nav-header">
+        
+        {/* BRAND/LOGO AREA - Clickable application title */}
+        <div 
+          className="nav-brand" 
+          onClick={() => handleNavigation(user ? 'products' : 'home')}
+          role="button"
+          tabIndex={0}
+          onKeyPress={(e) => e.key === 'Enter' && handleNavigation(user ? 'products' : 'home')}
+        >
+          E‑Store Manager
+        </div>
+
+        {/* MOBILE MENU TOGGLE BUTTON - Hamburger menu for small screens */}
+        <button
+          className={`menu-toggle ${isMenuOpen ? 'menu-open' : ''}`}
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Toggle navigation menu"
+          aria-expanded={isMenuOpen}
+        >
+          {/* HAMBURGER ICON LINES - Visual menu indicator */}
+          <span className="burger-line"></span>
+          <span className="burger-line"></span>
+          <span className="burger-line"></span>
+        </button>
+      </div>
+
+      {/* NAVIGATION LINKS CONTAINER - Conditional rendering based on user state */}
+      <div className={`nav-links ${isMenuOpen ? 'nav-links-open' : ''}`}>
+        
+        {/* UNAUTHENTICATED USER MENU - Public navigation options */}
+        {!user && (
           <>
-            {/* Links for regular users */}
-            {user.role === 'user' && (
-              <>
-                <a 
-                  href="#products" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('products'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Products
-                </a>
-                <a 
-                  href="#cart" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('cart'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  My Cart
-                </a>
-                <a 
-                  href="#orders" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('orders'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  My Orders
-                </a>
-              </>
-            )}
-            
-            {/* Links for ADMIN users only */}
-            {user.role === 'admin' && (
-              <>
-                <a 
-                  href="#products" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('products'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Products
-                </a>
-                <a 
-                  href="#admin-products" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('admin-products'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Manage Products
-                </a>
-                <a 
-                  href="#admin-users" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('admin-users'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Manage Users
-                </a>
-                <a 
-                  href="#admin-orders" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('admin-orders'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Manage Orders
-                </a>
-                <a 
-                  href="#admin-categories" 
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    handleNavigation('admin-categories'); 
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  Manage Categories
-                </a>
-              </>
-            )}
-            
-            {/* Logout button */}
             <button 
-              onClick={onLogout}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: 'white', 
-                cursor: 'pointer',
-                padding: '0.5rem'
-              }}
+              className="nav-link" 
+              onClick={() => handleNavigation('home')}
             >
-              Logout ({user.name})
+              Home
             </button>
-          </>
-        ) : (
-          /* Links for visitors (not logged in) */
-          <>
-            <a 
-              href="#products" 
-              onClick={(e) => { 
-                e.preventDefault(); 
-                handleNavigation('products'); 
-              }}
-              style={{ cursor: 'pointer' }}
-            >
-              Products
-            </a>
-            <a 
-              href="#login" 
-              onClick={(e) => { 
-                e.preventDefault(); 
-                handleNavigation('login'); 
-              }}
-              style={{ cursor: 'pointer' }}
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('login')}
             >
               Login
-            </a>
-            <a 
-              href="#register" 
-              onClick={(e) => { 
-                e.preventDefault(); 
-                handleNavigation('register'); 
-              }}
-              style={{ cursor: 'pointer' }}
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('register')}
             >
               Register
-            </a>
+            </button>
+          </>
+        )}
+
+        {/* AUTHENTICATED CUSTOMER MENU - Shopping and user management */}
+        {user && user.role === 'user' && (
+          <>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('products')}
+            >
+              All Products
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('cart')}
+            >
+              Cart Shopping 
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('orders')}
+            >
+              My Orders
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('profile')}
+            >
+              My Profile
+            </button>
+            <button 
+              className="nav-link nav-logout" 
+              onClick={handleLogout}
+            >
+              Logout ({user.name || user.email})
+            </button>
+          </>
+        )}
+
+        {/* ADMINISTRATOR MENU - Management dashboard options */}
+        {user && user.role === 'admin' && (
+          <>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('admin-home')}
+            >
+              All Products
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('admin-products')}
+            >
+              Products Management
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('admin-users')}
+            >
+              Users Management
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('admin-orders')}
+            >
+              Orders Management
+            </button>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('admin-categories')}
+            >
+              Categories Management
+            </button>
+            <button 
+              className="nav-link nav-logout" 
+              onClick={handleLogout}
+            >
+              Logout ({user.name || user.email})
+            </button>
           </>
         )}
       </div>
@@ -168,4 +168,5 @@ const Navbar = ({ user, onLogout, onViewChange }) => {
   );
 };
 
+// DEFAULT EXPORT - Make component available for import
 export default Navbar;

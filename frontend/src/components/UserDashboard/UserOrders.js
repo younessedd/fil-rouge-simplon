@@ -1,240 +1,242 @@
+// REACT IMPORTS - Core React functionality and state management hooks
 import React, { useState, useEffect } from 'react';
-import { ordersAPI } from '../../services/api';
+import { ordersAPI } from '../../services/api';  // API service for order operations
+import './UserOrders.css';  // Component-specific styles
 
-const UserOrders = ({ onViewChange }) => { // Added onViewChange prop
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+// USER ORDERS COMPONENT - Order history and management interface
+const UserOrders = ({ onViewChange, showNotification }) => {
+  // STATE MANAGEMENT - Component state variables
+  const [orders, setOrders] = useState([]);                    // User's order list
+  const [loading, setLoading] = useState(true);                // Initial loading state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);  // Delete modal visibility
+  const [selectedOrder, setSelectedOrder] = useState(null);    // Order selected for deletion
+  const [deleteLoading, setDeleteLoading] = useState(false);   // Delete operation loading state
 
+  // EFFECT HOOK - Fetch orders when component mounts
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, []);  // Empty dependency array ensures this runs only once on mount
 
+  // FETCH ORDERS FUNCTION - Retrieve user's order history
   const fetchOrders = async () => {
     try {
-      const response = await ordersAPI.getUserOrders();
-      setOrders(response.data.data || response.data || []);
+      setLoading(true);  // Start loading state
+      const response = await ordersAPI.getUserOrders();  // API call to get orders
+      const ordersData = response.data.data || response.data || [];  // Handle different response formats
+      setOrders(ordersData);  // Update orders state with fetched data
     } catch (error) {
       console.error('Error fetching orders:', error);
-      alert('Failed to load your orders');
+      showNotification('Failed to load your orders', 'error');  // Show error notification
     } finally {
-      setLoading(false);
+      setLoading(false);  // End loading state regardless of outcome
     }
   };
 
-  const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
+  // OPEN DELETE MODAL - Prepare order for deletion confirmation
+  const openDeleteModal = (order) => {
+    setSelectedOrder(order);        // Store selected order
+    setShowDeleteModal(true);       // Show confirmation modal
+  };
 
+  // CLOSE DELETE MODAL - Reset deletion state
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);      // Hide modal
+    setSelectedOrder(null);         // Clear selected order
+    setDeleteLoading(false);        // Reset loading state
+  };
+
+  // DELETE ORDER HANDLER - Process order deletion
+  const handleDeleteOrder = async () => {
+    if (!selectedOrder) return;  // Guard clause if no order selected
+
+    const orderIdToDelete = selectedOrder.id;    // Extract order ID
+    const orderNumber = selectedOrder.id;        // Order number for display
+    
     try {
-      await ordersAPI.delete(orderId);
-      setOrders(orders.filter(order => order.id !== orderId));
-      alert('Order deleted successfully');
+      setDeleteLoading(true);  // Start delete operation loading
+      
+      // API CALL ATTEMPT - Try different deletion methods for compatibility
+      let response;
+      try {
+        // First attempt with deleteOrder method
+        response = await ordersAPI.deleteOrder(orderIdToDelete);
+      } catch (firstError) {
+        console.log('deleteOrder method failed, trying delete method...');
+        // Fallback to delete method if deleteOrder fails
+        response = await ordersAPI.delete(orderIdToDelete);
+      }
+      
+      // SUCCESS HANDLING - Update local state and show confirmation
+      const updatedOrders = orders.filter(order => order.id !== orderIdToDelete);
+      setOrders(updatedOrders);  // Remove deleted order from local state
+      
+      showNotification(`Order #${orderNumber} deleted successfully!`, 'success');
+      closeDeleteModal();  // Close confirmation modal
+      
     } catch (error) {
-      console.error('Error deleting order:', error);
-      alert('Failed to delete order');
+      console.error('Delete error:', error);
+      
+      // ENHANCED ERROR HANDLING - Provide specific error messages
+      let errorMessage = 'Failed to delete order';
+      
+      if (error.response) {
+        // Server responded with error status
+        errorMessage = error.response.data?.message || 
+                      error.response.data?.error || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Other error types
+        errorMessage = error.message || 'Unknown error occurred';
+      }
+      
+      showNotification(errorMessage, 'error');
+      // Order remains in local state since deletion failed
+    } finally {
+      setDeleteLoading(false);  // End delete operation loading
     }
   };
 
-  // Safe navigation function
+  // BROWSE PRODUCTS HANDLER - Navigate to products view
   const handleBrowseProducts = () => {
     if (typeof onViewChange === 'function') {
-      onViewChange('products');
+      onViewChange('products');  // Use parent navigation if available
     } else {
-      // Fallback: Use hash navigation
-      window.location.hash = 'products';
+      window.location.hash = 'products';  // Fallback navigation
     }
   };
 
-  // Calculate order statistics - REMOVED AVERAGE ORDER
+  // CALCULATE ORDER STATISTICS - Generate order summary data
   const calculateOrderStats = () => {
-    const totalOrders = orders.length;
-    const totalSpent = orders.reduce((total, order) => total + parseFloat(order.total), 0);
-
+    const totalOrders = orders.length;  // Count total orders
+    const totalSpent = orders.reduce((total, order) => total + parseFloat(order.total || 0), 0);  // Sum order totals
     return { totalOrders, totalSpent };
   };
 
-  const { totalOrders, totalSpent } = calculateOrderStats();
+  const { totalOrders, totalSpent } = calculateOrderStats();  // Destructure statistics
 
+  // LOADING STATE - Display during data fetch
   if (loading) {
     return (
-      <div className="loading">
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div 
-            style={{
-              width: '50px',
-              height: '50px',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #3498db',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              marginBottom: '1rem'
-            }}
-          ></div>
-          <p style={{ color: '#666', margin: 0 }}>Loading your orders...</p>
+      <div className="user-orders-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className="loading-text">Loading your orders...</p>
         </div>
       </div>
     );
   }
 
+  // COMPONENT RENDER - Main order management interface
   return (
-    <div>
-      {/* Orders Header */}
-      <div className="card mb-2">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h2>📦 My Orders</h2>
-            <p style={{ color: '#666', margin: 0 }}>Track and manage your purchase history</p>
+    <div className="user-orders-container">
+      
+      {/* ORDERS HEADER SECTION - Title and refresh button */}
+      <div className="management-card">
+        <div className="orders-header">
+          <div className="header-title">
+            <h1>My Orders</h1>  {/* Main page title */}
+            <p className="header-subtitle">Track and manage your purchase history</p>  {/* Subtitle */}
           </div>
-          <button className="btn" onClick={fetchOrders}>
-            🔄 Refresh
+          <button className="management-btn btn-secondary" onClick={fetchOrders}>
+            Refresh Orders  {/* Refresh button text */}
           </button>
         </div>
       </div>
 
-      {/* Order Statistics - REMOVED AVERAGE ORDER */}
+      {/* ORDER STATISTICS SECTION - Summary of order history */}
       {orders.length > 0 && (
-        <div className="card mb-2" style={{ backgroundColor: '#f8f9fa' }}>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '1rem',
-            textAlign: 'center'
-          }}>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3498db' }}>
-                {totalOrders}
-              </div>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Orders</div>
+        <div className="stats-container">
+          <div className="stats-grid">
+            <div className="stat-item">
+              <div className="stat-value">{totalOrders}</div>  {/* Total orders count */}
+              <div className="stat-label">Total Orders</div>
             </div>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#27ae60' }}>
-                {totalSpent.toFixed(2)} SAR
-              </div>
-              <div style={{ color: '#666', fontSize: '0.9rem' }}>Total Spent</div>
+            <div className="stat-item">
+              <div className="stat-value total-spent">{totalSpent.toFixed(2)} DH</div>  {/* Total spent amount */}
+              <div className="stat-label">Total Spent</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Orders List */}
+      {/* ORDERS LIST SECTION - Display individual orders */}
       {orders.length > 0 ? (
         orders.map(order => {
-          const orderDate = new Date(order.created_at);
-          const totalItems = order.items ? order.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+          const orderDate = new Date(order.created_at);  // Parse order date
+          const totalItems = order.items ? order.items.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;  // Calculate total items
 
           return (
-            <div key={order.id} className="card mb-2">
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'flex-start', 
-                flexWrap: 'wrap', 
-                gap: '1rem' 
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, color: '#2c3e50' }}>Order #{order.id}</h3>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      backgroundColor: '#3498db',
-                      color: 'white',
-                      borderRadius: '20px',
-                      fontSize: '0.8rem',
-                      fontWeight: 'bold'
-                    }}>
-                      {totalItems} {totalItems === 1 ? 'item' : 'items'}
+            <div key={order.id} className="order-card">
+              <div className="order-header">
+                <div className="order-main-info">
+                  <div className="order-title">
+                    <h3 className="order-id">Order #{order.id}</h3>  {/* Order number */}
+                    <span className="items-badge">
+                      {totalItems} {totalItems === 1 ? 'item' : 'items'}  {/* Item count badge */}
                     </span>
                   </div>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                    <div>
-                      <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                        <strong>Date:</strong> {orderDate.toLocaleDateString('en-US')}
-                      </p>
-                      <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                        <strong>Time:</strong> {orderDate.toLocaleTimeString('en-US')}
-                      </p>
+                  {/* ORDER METADATA GRID - Order details */}
+                  <div className="order-meta-grid">
+                    <div className="order-meta-item">
+                      <span className="meta-label">Date</span>
+                      <span className="meta-value">{orderDate.toLocaleDateString('en-US')}</span>  {/* Order date */}
                     </div>
-                    <div>
-                      <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                        <strong>Items:</strong> {order.items?.length || 0}
-                      </p>
-                      <p style={{ margin: '0.25rem 0', color: '#666' }}>
-                        <strong>Total Quantity:</strong> {totalItems}
-                      </p>
+                    <div className="order-meta-item">
+                      <span className="meta-label">Time</span>
+                      <span className="meta-value">{orderDate.toLocaleTimeString('en-US')}</span>  {/* Order time */}
                     </div>
-                    <div>
-                      <p style={{ 
-                        margin: '0.25rem 0', 
-                        fontSize: '1.2rem', 
-                        fontWeight: 'bold',
-                        color: '#e74c3c'
-                      }}>
-                        {order.total} SAR
-                      </p>
+                    <div className="order-meta-item">
+                      <span className="meta-label">Items</span>
+                      <span className="meta-value">{order.items?.length || 0}</span>  {/* Number of item types */}
+                    </div>
+                    <div className="order-meta-item">
+                      <span className="meta-label">Total Quantity</span>
+                      <span className="meta-value">{totalItems}</span>  {/* Total items count */}
+                    </div>
+                    <div className="order-meta-item">
+                      <span className="meta-label">Total Amount</span>
+                      <span className="order-total">{order.total || 0} DH</span>  {/* Order total amount */}
                     </div>
                   </div>
                 </div>
                 
+                {/* DELETE ORDER BUTTON */}
                 <button 
-                  className="btn btn-danger"
-                  onClick={() => handleDeleteOrder(order.id)}
-                  style={{ minWidth: '100px' }}
+                  className="management-btn btn-danger"
+                  onClick={() => openDeleteModal(order)}  // Open delete confirmation
                 >
-                  🗑️ Delete
+                  Delete Order  {/* Button text */}
                 </button>
               </div>
 
-              {/* Order Items */}
+              {/* ORDER ITEMS SECTION - Detailed item list */}
               {order.items && order.items.length > 0 && (
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#34495e' }}>Order Items:</h4>
-                  <div style={{ 
-                    display: 'grid', 
-                    gap: '0.5rem'
-                  }}>
+                <div className="order-items-section">
+                  <h4 className="items-title">Order Items</h4>  {/* Items section title */}
+                  <div className="items-list">
                     {order.items.map(item => (
-                      <div key={item.id} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        padding: '0.75rem',
-                        backgroundColor: '#f8f9fa',
-                        borderRadius: '4px'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <strong>{item.product?.name}</strong>
-                          <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                            {item.quantity} × {item.price} SAR each
+                      <div key={item.id} className="order-item">
+                        <div className="item-info">
+                          <div className="item-name">{item.product?.name || 'Unknown Product'}</div>  {/* Product name */}
+                          <div className="item-details">
+                            {item.quantity || 0} × {item.price || 0} DH each  {/* Quantity and price */}
                           </div>
                         </div>
-                        <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>
-                          {(item.quantity * item.price).toFixed(2)} SAR
+                        <div className="item-total">
+                          {((item.quantity || 0) * (item.price || 0)).toFixed(2)} DH  {/* Item total */}
                         </div>
                       </div>
                     ))}
                   </div>
                   
-                  {/* Order Total */}
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginTop: '1rem',
-                    padding: '1rem',
-                    backgroundColor: '#2c3e50',
-                    color: 'white',
-                    borderRadius: '4px',
-                    fontWeight: 'bold'
-                  }}>
-                    <span>ORDER TOTAL:</span>
-                    <span>{order.total} SAR</span>
+                  {/* ORDER TOTAL DISPLAY - Final order amount */}
+                  <div className="order-total-section">
+                    <span className="order-total-label">ORDER TOTAL</span>
+                    <span className="order-total-amount">{order.total || 0} DH</span>
                   </div>
                 </div>
               )}
@@ -242,32 +244,79 @@ const UserOrders = ({ onViewChange }) => { // Added onViewChange prop
           );
         })
       ) : (
-        <div className="card text-center" style={{ padding: '3rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📦</div>
-          <h3 style={{ color: '#666', marginBottom: '1rem' }}>No Orders Yet</h3>
-          <p style={{ color: '#666', marginBottom: '2rem' }}>
-            You haven't placed any orders yet. Start shopping to see your orders here!
-          </p>
+        /* EMPTY STATE - No orders message */
+        <div className="empty-state">
+          <h3>No Orders Yet</h3>  {/* Empty state title */}
+          <p>You haven't placed any orders yet. Start shopping to see your orders here!</p>  {/* Empty state message */}
           <button 
-            className="btn btn-primary"
-            onClick={handleBrowseProducts} // Use safe navigation function
-            style={{ fontSize: '1.1rem', padding: '0.75rem 1.5rem' }}
+            className="management-btn btn-primary"
+            onClick={handleBrowseProducts}  // Navigate to products
           >
-            🛍️ Browse Products
+            Browse Products  {/* Call to action button */}
           </button>
         </div>
       )}
 
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
+      {/* DELETE CONFIRMATION MODAL - Order deletion confirmation */}
+      {showDeleteModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Delete Order</h3>  {/* Modal title */}
+              <button className="modal-close" onClick={closeDeleteModal}>Close</button>  {/* Close button */}
+            </div>
+            
+            <div className="delete-modal-content">
+              <h4>Confirm Deletion</h4>  {/* Confirmation title */}
+              <p>
+                Are you sure you want to delete order <strong>#{selectedOrder?.id}</strong>?  {/* Order reference */}
+              </p>
+              
+              {/* ORDER DETAILS PREVIEW - Show what will be deleted */}
+              {selectedOrder && (
+                <div className="order-details-preview">
+                  <p><strong>Date:</strong> {selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleString('en-US') : 'N/A'}</p>
+                  <p><strong>Total:</strong> {selectedOrder.total || 0} DH</p>
+                  <p><strong>Items:</strong> {selectedOrder.items?.length || 0}</p>
+                </div>
+              )}
+              
+              <div className="delete-warning">
+                This action cannot be undone and all order data will be permanently lost!  {/* Warning message */}
+              </div>
+              
+              {/* DELETE ACTION BUTTONS - Confirm or cancel */}
+              <div className="delete-actions">
+                <button 
+                  className="management-btn btn-secondary" 
+                  onClick={closeDeleteModal}  // Cancel deletion
+                  disabled={deleteLoading}    // Disable during loading
+                >
+                  Cancel  {/* Cancel button */}
+                </button>
+                <button 
+                  className="management-btn btn-danger" 
+                  onClick={handleDeleteOrder}  // Confirm deletion
+                  disabled={deleteLoading}     // Disable during loading
+                >
+                  {deleteLoading ? (
+                    <span className="loading-content">
+                      <div className="loading-spinner-small"></div>
+                      Deleting...  {/* Loading state */}
+                    </span>
+                  ) : (
+                    'Confirm Delete' 
+                    
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// DEFAULT EXPORT - Make component available for import
 export default UserOrders;

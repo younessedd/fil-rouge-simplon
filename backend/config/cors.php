@@ -1,5 +1,8 @@
 <?php
 
+// ========================
+// 🌐 CORS CONFIGURATION FILE
+// ========================
 return [
 
     /*
@@ -15,20 +18,60 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    // ========================
+    // 🛣️ PATHS CONFIGURATION
+    // ========================
+    'paths' => [
+        'api/*',              // Apply CORS to all API routes
+        'sanctum/csrf-cookie' // Allow CSRF cookie for Sanctum authentication
+    ],
 
-    'allowed_methods' => ['*'],
+    // ========================
+    // 🔧 ALLOWED HTTP METHODS
+    // ========================
+    'allowed_methods' => [
+        '*'  // Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
+    ],
 
-    'allowed_origins' => ['http://localhost:5173','http://localhost:3000'],
+    // ========================
+    // 🌍 ALLOWED ORIGINS (FRONTEND URLs)
+    // ========================
+    'allowed_origins' => [
+        'http://localhost:5173',  // Vite development server (React/Vue)
+        'http://localhost:3000'   // Create React App development server
+    ],
 
-    'allowed_origins_patterns' => [],
+    // ========================
+    // 🎯 ALLOWED ORIGINS PATTERNS
+    // ========================
+    'allowed_origins_patterns' => [
+        // Regular expressions for dynamic origin matching
+        // (Currently empty - using specific origins above)
+    ],
 
-    'allowed_headers' => ['*'],
+    // ========================
+    // 📋 ALLOWED HEADERS
+    // ========================
+    'allowed_headers' => [
+        '*'  // Allow all headers (Content-Type, Authorization, etc.)
+    ],
 
-    'exposed_headers' => [],
+    // ========================
+    // 📢 EXPOSED HEADERS
+    // ========================
+    'exposed_headers' => [
+        // Headers exposed to the frontend
+        // (Currently empty - no custom headers needed)
+    ],
 
-    'max_age' => 0,
+    // ========================
+    // ⏱️ MAX AGE (CACHE DURATION)
+    // ========================
+    'max_age' => 0,  // Preflight request cache duration in seconds (0 = disabled)
 
-    'supports_credentials' => false,
+    // ========================
+    // 🔐 CREDENTIALS SUPPORT
+    // ========================
+    'supports_credentials' => false,  // Allow cookies and authentication headers
 
 ];
