@@ -1,8 +1,5 @@
 <?php
 
-// ========================
-// 🗂️ NAMESPACE AND IMPORTS
-// ========================
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
@@ -12,139 +9,124 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
-// ========================
-// 📦 PRODUCT CONTROLLER CLASS
-// ========================
 class ProductController extends Controller
 {
-    // ========================
-    // 📋 GET ALL PRODUCTS (PAGINATED)
-    // ========================
     public function index()
     {
-        // Get products with category relationship, paginated (12 per page)
         $products = Product::with('category')->paginate(12);
-        
-        // Transform each product using formatProductResponse method
         $products->getCollection()->transform(fn($p) => $this->formatProductResponse($p));
-        
         return response()->json($products, 200);
     }
 
-    // ========================
-    // ➕ CREATE NEW PRODUCT
-    // ========================
     public function store(ProductRequest $request)
     {
-        // Check if current user is admin
         $user = $request->user();
         if ($user->role !== 'admin') return response()->json(['message' => 'Forbidden'], 403);
 
-        // Get validated data from ProductRequest
         $data = $request->validated();
 
-        // Handle image upload
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
         }
 
-        // Generate slug if not provided
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']) . '-' . time();
         }
 
-        // Create new product
         $product = Product::create($data);
-        
-        // Return formatted product response
         return response()->json($this->formatProductResponse($product), 201);
     }
 
-    // ========================
-    // 👀 GET SINGLE PRODUCT
-    // ========================
     public function show(Product $product)
     {
-        // Return formatted single product
         return response()->json($this->formatProductResponse($product), 200);
     }
 
-    // ========================
-    // ✏️ UPDATE EXISTING PRODUCT
-    // ========================
     public function update(ProductRequest $request, Product $product)
     {
-        // Check if current user is admin
         $user = $request->user();
         if ($user->role !== 'admin') return response()->json(['message' => 'Forbidden'], 403);
 
         $data = $request->validated();
 
-        // Handle image update (if new file uploaded)
         if ($request->hasFile('image')) {
-            // Delete old image if exists
             if ($product->image && Storage::disk('public')->exists($product->image)) {
                 Storage::disk('public')->delete($product->image);
             }
-            // Store new image
             $data['image'] = $request->file('image')->store('products', 'public');
         }
 
-        // Generate slug if not provided
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']) . '-' . time();
         }
 
-        // Update product with new data
         $product->update($data);
-        
-        // Return formatted updated product
         return response()->json($this->formatProductResponse($product), 200);
     }
 
-    // ========================
-    // 🗑️ DELETE PRODUCT
-    // ========================
     public function destroy(Product $product)
     {
-        // Check if current user is admin
         $user = auth()->user();
         if ($user->role !== 'admin') return response()->json(['message' => 'Forbidden'], 403);
 
-        // Delete product image if exists
         if ($product->image && Storage::disk('public')->exists($product->image)) {
             Storage::disk('public')->delete($product->image);
         }
 
-        // Delete product from database
         $product->delete();
-        
         return response()->json(null, 204);
     }
 
-    // ========================
-    // 🔍 SEARCH PRODUCTS
-    // ========================
     public function search(Request $request)
     {
-        // Get search query from request
         $query = $request->query('q');
-        
-        // Search in product name and description
         $products = Product::where('name', 'LIKE', "%{$query}%")
             ->orWhere('description', 'LIKE', "%{$query}%")
             ->with('category')
             ->paginate(12);
 
-        // Transform each product using formatProductResponse method
         $products->getCollection()->transform(fn($p) => $this->formatProductResponse($p));
-        
         return response()->json($products, 200);
     }
 
-    // ========================
-    // 🎨 FORMAT PRODUCT RESPONSE
-    // ========================
+    public function debugImages()
+    {
+        $products = Product::all();
+        $debugInfo = [];
+        
+        foreach ($products as $product) {
+            $filename = $product->image ? basename($product->image) : null;
+            $debugInfo[] = [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'image_in_db' => $product->image,
+                'filename' => $filename,
+                'storage_exists' => $filename ? file_exists(storage_path('app/public/products/' . $filename)) : false,
+                'public_exists' => $filename ? file_exists(public_path('storage/products/' . $filename)) : false,
+                'generated_url' => $this->generateImageUrl($product->image),
+                'direct_test_url' => $filename ? url("storage/products/{$filename}") : null,
+            ];
+        }
+        
+        return response()->json($debugInfo);
+    }
+
+    public function checkStorage()
+    {
+        $storagePath = storage_path('app/public/products/');
+        $publicPath = public_path('storage/products/');
+        
+        return response()->json([
+            'storage_path' => $storagePath,
+            'storage_exists' => file_exists($storagePath),
+            'public_path' => $publicPath,
+            'public_exists' => file_exists($publicPath),
+            'storage_files' => file_exists($storagePath) ? scandir($storagePath) : [],
+            'public_files' => file_exists($publicPath) ? scandir($publicPath) : [],
+            'storage_link' => file_exists(public_path('storage')) ? 'Exists' : 'Missing'
+        ]);
+    }
+
     private function formatProductResponse($product)
     {
         return [
@@ -163,18 +145,10 @@ class ProductController extends Controller
         ];
     }
 
-    // ========================
-    // 🌐 GENERATE IMAGE URL
-    // ========================
     private function generateImageUrl($imagePath)
     {
-        // Return placeholder if no image
         if (!$imagePath) return 'https://via.placeholder.com/300x300/CCCCCC/FFFFFF?text=No+Image';
-        
-        // Extract filename from path
         $filename = basename($imagePath);
-        
-        // Generate full image URL using app configuration
-        return config('app.url') . '/api/images/products/' . $filename;
+        return url("storage/products/{$filename}");
     }
 }

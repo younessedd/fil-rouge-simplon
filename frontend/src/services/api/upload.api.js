@@ -25,7 +25,8 @@ export const uploadAPI = {
     formData.append('image', file);
     
     // Send POST request using specialized FormData handler
-    return makeFormDataRequest('/upload/image', formData, 'POST');
+    // Use the correct endpoint that matches our Laravel route
+    return makeFormDataRequest('/api/upload/image', formData, 'POST');
   },
   
   // UPLOAD MULTIPLE - Upload multiple image files
@@ -47,7 +48,8 @@ export const uploadAPI = {
     });
     
     // Send POST request using specialized FormData handler
-    return makeFormDataRequest('/upload/multiple', formData, 'POST');
+    // Use the correct endpoint that matches our Laravel route
+    return makeFormDataRequest('/api/upload/multiple', formData, 'POST');
   },
 };
 
