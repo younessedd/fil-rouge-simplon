@@ -77,7 +77,28 @@ const ProductItem = ({ product, showNotification }) => {
 
   const handleAddToCart = async () => {
     if (product.stock < 1) return;
-    setShowCartPopup(true);
+
+    try {
+      setAddingToCart(true);
+      // Add 1 by default, you could open popup to choose quantity
+      await cartAPI.add({ product_id: product.id, quantity: 1 });
+
+      // Notify other parts of the app that cart changed
+      window.dispatchEvent(new Event('cartUpdated'));
+      // Also ask app to open the cart view so user sees the added item
+      window.dispatchEvent(new Event('openCart'));
+
+      showNotification(`Added 1 × ${product.name} to cart`, 'success');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      let message = 'Failed to add to cart';
+      if (error.message && error.message.includes('AUTH_REQUIRED')) {
+        message = 'Please log in to add items to your cart';
+      }
+      showNotification(message, 'error');
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   const handleAddToCartConfirm = async () => {
@@ -184,9 +205,9 @@ const ProductItem = ({ product, showNotification }) => {
           <button
             className={`product-btn ${product.stock < 1 ? 'btn-out-of-stock' : 'btn-add-cart'}`}
             onClick={handleAddToCart}
-            disabled={product.stock < 1}
+            disabled={product.stock < 1 || addingToCart}
           >
-            {product.stock < 1 ? 'Out of Stock' : 'Add to Cart'}
+            {product.stock < 1 ? 'Out of Stock' : (addingToCart ? 'Adding...' : 'Add to Cart')}
           </button>
         </div>
       </div>

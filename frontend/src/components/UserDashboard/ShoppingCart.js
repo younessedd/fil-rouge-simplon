@@ -20,6 +20,35 @@ const ShoppingCart = ({ onViewChange, showNotification }) => {
   // EFFECT HOOK - Fetch cart data when component mounts
   useEffect(() => {
     fetchCart();
+
+    // Listen for cart updates from other components (e.g., Add to Cart button)
+    const handleCartUpdated = () => fetchCart();
+    window.addEventListener('cartUpdated', handleCartUpdated);
+
+    // Listen for lightweight item updates to patch local state without full fetch
+    const handleCartItemUpdated = (e) => {
+      const detail = e && e.detail ? e.detail : null;
+      if (!detail) return;
+      const { cart_item_id, quantity } = detail;
+      setCartItems(prev => prev.map(item => {
+        const id = getItemId(item);
+        if (id === cart_item_id) {
+          const updated = { ...item };
+          // update both top-level and pivot quantity if present
+          updated.quantity = quantity;
+          if (updated.pivot) updated.pivot.quantity = quantity;
+          return updated;
+        }
+        return item;
+      }));
+    };
+
+    window.addEventListener('cartItemUpdated', handleCartItemUpdated);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdated);
+      window.removeEventListener('cartItemUpdated', handleCartItemUpdated);
+    };
   }, []);  // Empty dependency array ensures this runs only once on mount
 
   // FETCH CART FUNCTION - Retrieve current cart contents from API
@@ -303,6 +332,7 @@ const ShoppingCart = ({ onViewChange, showNotification }) => {
                 key={getItemId(item) || index}  // Unique key for each item
                 item={item} 
                 onRemove={openRemoveModal}  // Remove item handler
+                showNotification={showNotification} // Notification handler
               />
             ))}
             

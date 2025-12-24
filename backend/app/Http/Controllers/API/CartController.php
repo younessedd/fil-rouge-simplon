@@ -55,6 +55,35 @@ class CartController extends Controller
     }
 
     // ========================
+    // ✏️ UPDATE CART ITEM (quantity)
+    // ========================
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'quantity' => 'required|integer|min:1'
+        ]);
+
+        $item = CartItem::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->with('product')
+            ->first();
+
+        if (!$item) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        // Check stock availability
+        if ($item->product && $request->quantity > $item->product->stock) {
+            return response()->json(['message' => 'Not enough stock'], 400);
+        }
+
+        $item->quantity = $request->quantity;
+        $item->save();
+
+        return response()->json($item, 200);
+    }
+
+    // ========================
     // 🗑️ REMOVE ITEM FROM CART
     // ========================
     public function destroy(Request $request, $id)

@@ -76,6 +76,13 @@ function App() {
       setLoading(false);
     };
     checkAuth();
+
+    // Listen for requests to open the cart (e.g., after adding an item)
+    const handleOpenCart = () => {
+      setCurrentView('cart');
+    };
+    window.addEventListener('openCart', handleOpenCart);
+    return () => window.removeEventListener('openCart', handleOpenCart);
   }, []);
 
 
