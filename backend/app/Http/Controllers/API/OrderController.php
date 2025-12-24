@@ -117,7 +117,7 @@ class OrderController extends Controller
     }
 
     // ========================
-    // 🗑️ DELETE ORDER
+    // 🗑️ DELETE ORDER (USER)
     // ========================
     public function destroy($id)
     {
@@ -126,5 +126,23 @@ class OrderController extends Controller
         $order->delete();
         
         return response()->json(['message' => 'Order deleted successfully'], 200);
+    }
+
+    // ========================
+    // 🛡️ ADMIN DELETE ORDER (ADMIN ONLY)
+    // ========================
+    public function adminDestroy($id)
+    {
+        // Only admins can delete arbitrary orders
+        $user = auth()->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Find the order (no user scoping for admins)
+        $order = Order::findOrFail($id);
+        $order->delete();
+
+        return response()->json(['message' => 'Order deleted by admin successfully'], 200);
     }
 }

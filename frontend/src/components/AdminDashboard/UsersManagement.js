@@ -49,6 +49,9 @@ const UsersManagement = () => {
     city: ''
   });
 
+  // Show / hide password state
+  const [showPassword, setShowPassword] = useState(false);
+
   // ===== EFFECT HOOKS =====
 
   // Detect screen size for responsive behavior
@@ -674,16 +677,38 @@ const UsersManagement = () => {
                 {/* Password Field */}
                 <div className="form-group">
                   <label>Password {selectedUser && '(leave empty to keep current)'} *</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    minLength="6"
-                    required={!selectedUser}
-                    placeholder="Enter password"
-                    className="form-input"
-                  />
+                  <div className="password-wrapper">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      minLength="6"
+                      required={!selectedUser}
+                      placeholder="Enter password"
+                      className="form-input password-input"
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M9.88 9.88a3 3 0 004.24 4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M2.6 12.1C3.9 7.9 7.6 5 12 5c2.2 0 4.2.8 5.8 2.1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : (
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Role Selection */}

@@ -79,6 +79,8 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('orders', OrderController::class)->only(['index', 'store', 'show', 'destroy']);
     Route::get('/admin/orders', [OrderController::class, 'allOrdersForAdmin']);
+    // Admin hard delete route for orders
+    Route::delete('/admin/orders/{id}', [OrderController::class, 'adminDestroy']);
     Route::get('/admin/dashboard-stats', [AdminController::class, 'getDashboardStats']);
     Route::apiResource('users', UserController::class);
 
