@@ -1,5 +1,5 @@
 // IMPORT SECTION - React, API, and styles
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 //import { authAPI } from '../../services/api';  // Authentication API calls
 
 import { authAPI } from '../../services/api/auth.api';
@@ -16,6 +16,9 @@ const Login = ({ onLogin, onSwitchToRegister }) => {
   const [error, setError] = useState('');             // Error message display
   const [fieldErrors, setFieldErrors] = useState({}); // Field-specific errors (email, password)
   const [showPassword, setShowPassword] = useState(false);  // Password visibility toggle
+  // Refs to focus inputs when there are errors
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
 
   // INPUT CHANGE HANDLER - Update form data on user input
   const handleChange = (e) => {
@@ -62,6 +65,11 @@ const Login = ({ onLogin, onSwitchToRegister }) => {
 
         setFieldErrors(mapped);
         setError(mapped[Object.keys(mapped)[0]] || 'Please fix the highlighted fields');
+
+        // Focus first invalid input
+        const first = Object.keys(mapped)[0];
+        if (first === 'email' && emailRef.current) emailRef.current.focus();
+        if (first === 'password' && passwordRef.current) passwordRef.current.focus();
       } else if (apiResponse?.message) {
         // Specific server messages - normalize and map to friendly messages
         let msg = apiResponse.message || '';
@@ -76,13 +84,25 @@ const Login = ({ onLogin, onSwitchToRegister }) => {
 
         msg = msg.trim();
 
-        // Map to specific field errors when message references a field
-        if (/email/i.test(msg)) {
+        // If the message clearly indicates the email is not registered, show the message, focus email and open register view
+        if (/not registered|no account|does not exist|not found/i.test(msg) && /email/i.test(msg)) {
           setFieldErrors({ email: msg });
           setError(msg);
+          if (emailRef.current) emailRef.current.focus();
+          if (typeof onSwitchToRegister === 'function') {
+            setTimeout(() => onSwitchToRegister(), 900);
+          }
+
+        } else if (/email/i.test(msg)) {
+          setFieldErrors({ email: msg });
+          setError(msg);
+          if (emailRef.current) emailRef.current.focus();
+
         } else if (/password/i.test(msg)) {
           setFieldErrors({ password: msg });
           setError(msg);
+          if (passwordRef.current) passwordRef.current.focus();
+
         } else {
           // Generic server message shown in subtitle
           setError(msg || 'Login failed. Please try again.');
@@ -116,6 +136,7 @@ const Login = ({ onLogin, onSwitchToRegister }) => {
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <input
+              ref={emailRef}
               type="email"
               name="email"
               value={formData.email}
@@ -133,6 +154,7 @@ const Login = ({ onLogin, onSwitchToRegister }) => {
             <label className="form-label">Password</label>
             <div className="password-input-container">
               <input
+                ref={passwordRef}
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}

@@ -114,6 +114,40 @@ function App() {
     showNotification('Logged out successfully', 'info');
   };
 
+  // -------------------------------
+  // LOGOUT CONFIRMATION - Show modal before logging out
+  // -------------------------------
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const requestLogout = () => setLogoutConfirm(true);
+  const cancelLogout = () => setLogoutConfirm(false);
+  const confirmLogout = () => {
+    cancelLogout();
+    handleLogout();
+  };
+
+  // -------------------------------
+  // NAVIGATION WRAPPER - sets view and optionally scrolls to sections
+  // -------------------------------
+  const navigate = (view) => {
+    setCurrentView(view);
+    // Small delay to allow DOM to render the target section
+    setTimeout(() => {
+      if (view === 'home') {
+        const el = document.querySelector('.hero-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      if (view === 'products') {
+        const el = document.querySelector('.products-list-container');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (view === 'cart') {
+        const el = document.querySelector('.shopping-cart-container');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
+  };
+
 
   // -------------------------------
   // NOTIFICATION UI COMPONENT
@@ -160,7 +194,12 @@ function App() {
         case 'login':
           return <Login onLogin={handleLogin} onSwitchToRegister={() => setCurrentView('register')} showNotification={showNotification} />;
         default:
-          return <HeroPage onViewChange={setCurrentView} />;
+          return (
+            <>
+              <HeroPage onViewChange={navigate} showNotification={showNotification} />
+              <ProductsList user={null} onViewChange={navigate} showNotification={showNotification} />
+            </>
+          );
       }
     }
 
@@ -179,11 +218,18 @@ function App() {
 
     // USER ROUTES
     switch (currentView) {
-      case 'products': return <ProductsList user={user} onViewChange={setCurrentView} showNotification={showNotification} />;
-      case 'cart': return <ShoppingCart onViewChange={setCurrentView} showNotification={showNotification} />;
-      case 'orders': return <UserOrders onViewChange={setCurrentView} showNotification={showNotification} />;
-      case 'profile': return <UserProfile user={user} onViewChange={setCurrentView} showNotification={showNotification} />;
-      default: return <ProductsList user={user} onViewChange={setCurrentView} showNotification={showNotification} />;
+      case 'home':
+        return (
+          <>
+            <HeroPage onViewChange={navigate} showNotification={showNotification} />
+            <ProductsList user={user} onViewChange={navigate} showNotification={showNotification} />
+          </>
+        );
+      case 'products': return <ProductsList user={user} onViewChange={navigate} showNotification={showNotification} />;
+      case 'cart': return <ShoppingCart onViewChange={navigate} showNotification={showNotification} />;
+      case 'orders': return <UserOrders onViewChange={navigate} showNotification={showNotification} />;
+      case 'profile': return <UserProfile user={user} onViewChange={navigate} showNotification={showNotification} />;
+      default: return <ProductsList user={user} onViewChange={navigate} showNotification={showNotification} />;
     }
   };
 
@@ -193,10 +239,30 @@ function App() {
   // -------------------------------
   return (
     <div className="App">
-      <Navbar user={user} onLogout={handleLogout} onViewChange={setCurrentView} />
+      <Navbar user={user} onRequestLogout={requestLogout} onViewChange={navigate} />
 
       <main className="container">
         <Notification />
+
+        {/* Logout confirmation modal */}
+        {logoutConfirm && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h3>Confirm Logout</h3>
+                <button className="modal-close" onClick={cancelLogout}>×</button>
+              </div>
+              <div className="delete-modal-content">
+                <p>Are you sure you want to log out?</p>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button className="management-btn btn-secondary" onClick={cancelLogout}>Cancel</button>
+                  <button className="management-btn btn-danger" onClick={confirmLogout}>Logout</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {renderContent()}
       </main>
 

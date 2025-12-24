@@ -98,10 +98,10 @@ const HeroPage = ({ onViewChange }) => {
                   <div className="hero-content">
                     <h1 className="hero-title">{slide.title}</h1>
                     <p className="hero-description">{slide.description}</p>
-                    {/* LOGIN BUTTON - Navigates to login view */}
+                    {/* EXPLORE BUTTON - Scrolls to products list */}
                     <button 
                       className="login-btn" 
-                      onClick={() => onViewChange('login')}
+                      onClick={() => onViewChange('products')}
                     >
                       Explore Collection
                     </button>

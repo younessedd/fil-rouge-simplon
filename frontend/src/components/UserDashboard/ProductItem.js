@@ -3,7 +3,7 @@ import { cartAPI } from '../../services/api/cart.api';
 import { getProductImageUrl } from '../../services/api/api.config';
 import './ProductItem.css';
 
-const ProductItem = ({ product, showNotification }) => {
+const ProductItem = ({ product, user, onViewChange, showNotification }) => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -77,6 +77,13 @@ const ProductItem = ({ product, showNotification }) => {
 
   const handleAddToCart = async () => {
     if (product.stock < 1) return;
+
+    // If user is not logged in, redirect to login page
+    if (!user) {
+      if (typeof onViewChange === 'function') onViewChange('login');
+      if (showNotification) showNotification('Please log in to add items to your cart', 'info');
+      return;
+    }
 
     try {
       setAddingToCart(true);

@@ -16,14 +16,15 @@ const ProductsList = ({ user, onViewChange, showNotification }) => {
   const [totalProducts, setTotalProducts] = useState(0); // Total products count
   const [searchQuery, setSearchQuery] = useState('');    // Search input value
 
-  // EFFECT HOOK - Fetch products when user or page changes
+  // EFFECT HOOK - Fetch products when page changes (always fetch public catalog)
   useEffect(() => {
-    if (user) {
-      fetchProducts(currentPage);  // Fetch products if user is authenticated
-    } else {
-      setLoading(false);  // Stop loading if no user
-    }
-  }, [user, currentPage]);  // Dependencies: user authentication and current page
+    fetchProducts(currentPage);
+  }, [currentPage]);  // Dependencies: current page
+
+  // Fetch first page on mount
+  useEffect(() => {
+    fetchProducts(1);
+  }, []);
 
   // FETCH PRODUCTS FUNCTION - Retrieve fragrances from API with pagination
   const fetchProducts = async (page = 1) => {
@@ -181,18 +182,7 @@ const ProductsList = ({ user, onViewChange, showNotification }) => {
     );
   };
 
-  // UNAUTHENTICATED USER VIEW - Show login prompt
-  if (!user) {
-    return (
-      <div className="hero-container">
-        <h1>Welcome to I Smell Shop</h1>  {/* Updated welcome title */}
-        <p>Discover luxury fragrances after logging in!</p>  {/* Updated welcome message */}
-        <button className="btn-primary" onClick={() => onViewChange('login')}>
-          Login to Explore Fragrances  {/* Updated login call to action */}
-        </button>
-      </div>
-    );
-  }
+
 
   // LOADING STATE - Display during data fetch
   if (loading) {
@@ -281,6 +271,7 @@ const ProductsList = ({ user, onViewChange, showNotification }) => {
                 key={product.id}  // Unique product key
                 product={product}
                 user={user}
+                onViewChange={onViewChange}
                 showNotification={showNotification}  // Notification handler
               />
             ))}

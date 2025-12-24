@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import './Navbar.css';  // Import component-specific styles
 
 // NAVBAR COMPONENT - Main navigation with user authentication handling
-const Navbar = ({ user, onLogout, onViewChange }) => {
+const Navbar = ({ user, onRequestLogout, onViewChange }) => {
   // STATE MANAGEMENT - Mobile menu visibility control
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -23,7 +23,7 @@ const Navbar = ({ user, onLogout, onViewChange }) => {
 
   // LOGOUT HANDLER - Enhanced logout with menu management
   const handleLogout = () => {
-    onLogout();             // Execute parent component logout logic
+    if (typeof onRequestLogout === 'function') onRequestLogout(); // Ask parent to confirm logout
     setIsMenuOpen(false);   // Ensure mobile menu closes on logout
   };
 
@@ -89,6 +89,12 @@ const Navbar = ({ user, onLogout, onViewChange }) => {
         {/* AUTHENTICATED CUSTOMER MENU - Shopping and user management */}
         {user && user.role === 'user' && (
           <>
+            <button 
+              className="nav-link" 
+              onClick={() => handleNavigation('home')}
+            >
+              Home
+            </button>
             <button 
               className="nav-link" 
               onClick={() => handleNavigation('products')}
